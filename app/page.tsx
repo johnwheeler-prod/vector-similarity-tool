@@ -50,50 +50,50 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-semibold text-gray-900">
+      <header className="gradient-card border-b border-white/20 dark:border-white/10">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Vector Similarity Tool
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-lg text-gray-600 dark:text-gray-300 font-light">
             Compare passages to queries using cosine similarity in vector space
           </p>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Query Input */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              <Search className="inline w-4 h-4 mr-2" />
+          <div className="gradient-card rounded-2xl p-8 shadow-xl">
+            <label className="block text-lg font-semibold text-gray-800 dark:text-white mb-4">
+              <Search className="inline w-5 h-5 mr-3" />
               Search Query
             </label>
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter your search query here..."
-              className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full h-28 px-6 py-4 bg-white/80 dark:bg-slate-800/80 border border-white/30 dark:border-slate-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200"
               required
             />
           </div>
 
           {/* Passages Input */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              <FileText className="inline w-4 h-4 mr-2" />
+          <div className="gradient-card rounded-2xl p-8 shadow-xl">
+            <label className="block text-lg font-semibold text-gray-800 dark:text-white mb-4">
+              <FileText className="inline w-5 h-5 mr-3" />
               Article Passages
             </label>
             <textarea
               value={passages}
               onChange={(e) => setPassages(e.target.value)}
               placeholder="Enter article passages, one per line..."
-              className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full h-52 px-6 py-4 bg-white/80 dark:bg-slate-800/80 border border-white/30 dark:border-slate-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200"
               required
             />
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 font-medium">
               Each line will be treated as a separate passage for comparison.
             </p>
           </div>
@@ -102,17 +102,17 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading || !query.trim() || !passages.trim()}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn-primary w-full py-4 px-8 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
           >
             {loading ? (
               <>
-                <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
-                Calculating Similarity...
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Calculating Similarity...</span>
               </>
             ) : (
               <>
-                <BarChart3 className="inline w-4 h-4 mr-2" />
-                Find Similar Passages
+                <BarChart3 className="w-5 h-5" />
+                <span>Find Similar Passages</span>
               </>
             )}
           </button>
@@ -120,15 +120,15 @@ export default function Home() {
 
         {/* Error Message */}
         {error && (
-          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 text-sm">{error}</p>
+          <div className="mt-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6 shadow-lg">
+            <p className="text-red-800 dark:text-red-200 text-sm font-medium">{error}</p>
           </div>
         )}
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="mt-8 space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="mt-12 space-y-6">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
               Similarity Results
             </h2>
             {results.map((result, index) => {
@@ -160,10 +160,10 @@ export default function Home() {
               return (
                 <div
                   key={index}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                  className="gradient-card rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  <div className="flex items-start justify-between mb-6">
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-full border border-blue-200 dark:border-blue-700">
                       Rank #{index + 1}
                     </span>
                     <div className="flex items-center space-x-3">
@@ -208,12 +208,12 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-gray-600">
+                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                         similar
                       </span>
                     </div>
                   </div>
-                  <p className="text-gray-800 leading-relaxed">{result.text}</p>
+                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-lg font-medium">{result.text}</p>
                 </div>
               );
             })}
