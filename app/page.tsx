@@ -38,10 +38,6 @@ const analyzeTokenSimilarity = (text: string, query: string) => {
   });
 };
 
-// Highlight tokens with different match types
-const highlightTokens = (text: string, query: string) => {
-  return analyzeTokenSimilarity(text, query);
-};
 
 // Future utility for modification recommendations (currently unused but ready for implementation)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
