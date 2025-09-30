@@ -1,8 +1,69 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, FileText, BarChart3, Loader2 } from 'lucide-react';
+import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
 import { SimilarityResult } from '@/types';
+
+// Advanced tokenization function for similarity analysis
+const tokenizeText = (text: string): string[] => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+    .split(/\s+/)
+    .filter(token => token.length > 0);
+};
+
+// Get token similarity analysis for future modification recommendations
+const analyzeTokenSimilarity = (text: string, query: string) => {
+  const queryTokens = tokenizeText(query);
+  const textTokens = tokenizeText(text);
+  
+  return textTokens.map(token => {
+    const exactMatch = queryTokens.includes(token);
+    const partialMatch = queryTokens.some(queryToken => 
+      token.includes(queryToken) || queryToken.includes(token)
+    );
+    const stemMatch = queryTokens.some(queryToken => 
+      token.startsWith(queryToken) || queryToken.startsWith(token)
+    );
+    
+    return {
+      token,
+      exactMatch,
+      partialMatch,
+      stemMatch,
+      isRelevant: exactMatch || partialMatch || stemMatch,
+      matchType: exactMatch ? 'exact' : partialMatch ? 'partial' : stemMatch ? 'stem' : 'none'
+    };
+  });
+};
+
+
+// Future utility for modification recommendations (currently unused but ready for implementation)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const getModificationSuggestions = (text: string, query: string) => {
+  const tokenAnalysis = analyzeTokenSimilarity(text, query);
+  const queryTokens = tokenizeText(query);
+  
+  // Find tokens that could be improved
+  const weakTokens = tokenAnalysis.filter(token => 
+    !token.isRelevant && token.token.length > 3
+  );
+  
+  // Find query terms not present in text
+  const missingQueryTerms = queryTokens.filter(queryToken => 
+    !tokenAnalysis.some(token => token.isRelevant && token.token.includes(queryToken))
+  );
+  
+  return {
+    weakTokens: weakTokens.map(t => t.token),
+    missingQueryTerms,
+    suggestions: [
+      ...missingQueryTerms.map(term => `Consider adding "${term}" to improve relevance`),
+      ...weakTokens.slice(0, 3).map(token => `Consider replacing "${token.token}" with a more relevant term`)
+    ]
+  };
+};
 
 export default function Home() {
   const [query, setQuery] = useState('');
@@ -140,6 +201,14 @@ export default function Home() {
               // Calculate circumference for proper stroke-dasharray
               const circumference = 2 * Math.PI * 15.9155;
               const strokeDasharray = `${(clampedScore / 100) * circumference} ${circumference}`;
+
+              // Precompute token analysis once per result to avoid repeated calls during render
+              const tokenAnalysis = analyzeTokenSimilarity(result.text, query);
+              const relevantTokensCount = tokenAnalysis.filter(t => t.isRelevant).length;
+              const totalTokensCount = tokenAnalysis.length;
+              const exactCount = tokenAnalysis.filter(t => t.matchType === 'exact').length;
+              const partialCount = tokenAnalysis.filter(t => t.matchType === 'partial').length;
+              const stemCount = tokenAnalysis.filter(t => t.matchType === 'stem').length;
               
               const getScoreColor = (score: number) => {
                 if (score >= 90) return '#059669';
@@ -213,7 +282,79 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-lg font-medium">{result.text}</p>
+                  <div className="space-y-4">
+                    {/* Original text */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Original Passage
+                      </h4>
+                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-lg font-medium">
+                        {result.text}
+                      </p>
+                    </div>
+                    
+                    {/* Tokenized analysis */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Token Analysis
+                      </h4>
+                      <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
+                        <div className="flex flex-wrap gap-2">
+                          {tokenAnalysis.map((tokenData, tokenIndex) => {
+                            const getTokenStyle = (matchType: string) => {
+                              switch (matchType) {
+                                case 'exact':
+                                  return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700';
+                                case 'partial':
+                                  return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700';
+                                case 'stem':
+                                  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-700';
+                                default:
+                                  return 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400';
+                              }
+                            };
+                            
+                            return (
+                              <span
+                                key={tokenIndex}
+                                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${getTokenStyle(tokenData.matchType)}`}
+                                title={`Match type: ${tokenData.matchType}`}
+                              >
+                                {tokenData.token}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-3 space-y-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {relevantTokensCount} of {totalTokensCount} tokens match query terms
+                          </p>
+                          <div className="flex flex-wrap gap-4 text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-green-500 rounded"></div>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {exactCount} exact
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-blue-500 rounded"></div>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {partialCount} partial
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded"></div>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {stemCount} stem
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
