@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vector Similarity Tool
+
+A proof of concept tool for comparing passages from articles to queries using cosine similarity in multidimensional vector space. Built with Next.js, TypeScript, and Google's EmbeddingGemma model.
+
+## Features
+
+- **Vector Embeddings**: Uses Google's EmbeddingGemma model for generating text embeddings
+- **Cosine Similarity**: Calculates semantic similarity between queries and passages
+- **Modern UI**: Clean, Apple-inspired interface built with Tailwind CSS
+- **Real-time Results**: Instant similarity calculations with ranked results
+- **TypeScript**: Full type safety throughout the application
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- Google AI API key (free from [Google AI Studio](https://aistudio.google.com/app/apikey))
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd vector-similarity-tool
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create environment file:
+```bash
+touch .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Add your Google API key to `.env.local`:
+```
+GOOGLE_API_KEY=your_google_api_key_here
+```
 
-## Learn More
+5. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Enter a Query**: Type your search query in the first text area
+2. **Add Passages**: Enter article passages (one per line) in the second text area
+3. **Calculate Similarity**: Click "Find Similar Passages" to get ranked results
+4. **View Results**: See the most similar passages ranked by similarity score
 
-## Deploy on Vercel
+## How It Works
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Text Processing**: Both query and passages are processed to generate vector embeddings
+2. **Vector Generation**: Uses Google's EmbeddingGemma model to create 768-dimensional vectors
+3. **Similarity Calculation**: Computes cosine similarity between query and each passage vector
+4. **Ranking**: Results are ranked by similarity score (0-100%)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Cost Considerations
+
+- **EmbeddingGemma**: Completely free for local/API usage
+- **Google AI API**: Free tier available, very affordable for testing
+- **No Mixedbread costs**: This implementation uses Google's free model
+
+## Architecture
+
+```
+├── app/
+│   ├── api/
+│   │   ├── embeddings/route.ts    # Generate embeddings
+│   │   └── similarity/route.ts    # Calculate similarity
+│   └── page.tsx                   # Main UI component
+├── lib/
+│   └── embeddings.ts              # Core embedding logic
+├── types/
+│   └── index.ts                   # TypeScript definitions
+└── README.md
+```
+
+## Alternative Models
+
+This tool can be easily adapted to use other embedding models:
+
+- **Mixedbread**: Replace the embedding service with Mixedbread API
+- **OpenAI**: Use OpenAI's text-embedding-ada-002 model
+- **Local Models**: Run embedding models locally for complete privacy
+
+## Development
+
+```bash
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linting
+npm run lint
+```
+
+## License
+
+MIT License - feel free to use this code for your own projects!
