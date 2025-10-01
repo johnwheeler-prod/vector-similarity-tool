@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
 import { SimilarityResult, TokenSuggestion } from '@/types';
 
@@ -73,10 +73,68 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<{ [key: number]: TokenSuggestion[] }>({});
   const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
   const [error, setError] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
+  const [showApiKeyValue, setShowApiKeyValue] = useState(false);
+  const [usedRealAPI, setUsedRealAPI] = useState<boolean | null>(null);
+
+  // Load API key from localStorage on component mount
+  React.useEffect(() => {
+    const savedApiKey = localStorage.getItem('google_ai_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      setApiKeyValid(true);
+    }
+  }, []);
+
+  // Validate API key format
+  const validateApiKey = (key: string): boolean => {
+    // Google AI API keys typically start with "AIza" and are 39 characters long
+    return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+  };
+
+  // Handle API key input
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = e.target.value;
+    setApiKey(key);
+    
+    if (key.length === 0) {
+      setApiKeyValid(null);
+    } else {
+      setApiKeyValid(validateApiKey(key));
+    }
+  };
+
+  // Save API key to localStorage
+  const handleApiKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (apiKeyValid) {
+      localStorage.setItem('google_ai_api_key', apiKey);
+      setError('');
+    } else {
+      setError('Please enter a valid Google AI Studio API key');
+    }
+  };
+
+  // Clear API key
+  const clearApiKey = () => {
+    setApiKey('');
+    setApiKeyValid(null);
+    localStorage.removeItem('google_ai_api_key');
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || !passages.trim()) return;
+
+    console.log('🚀 Frontend: Starting similarity calculation');
+    console.log('🔑 Frontend: API Key exists:', !!apiKey);
+    console.log('🔑 Frontend: API Key length:', apiKey?.length || 0);
+    console.log('🔑 Frontend: API Key preview:', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
+    console.log('🔑 Frontend: API Key valid:', apiKeyValid);
+    console.log('📝 Frontend: Query:', query.trim());
 
     setLoading(true);
     setError('');
@@ -87,25 +145,39 @@ export default function Home() {
         .map(p => p.trim())
         .filter(p => p.length > 0);
 
+      console.log('📄 Frontend: Passages count:', passagesArray.length);
+
+      const requestBody = {
+        query: query.trim(),
+        passages: passagesArray,
+        topK: 5,
+        apiKey: apiKey || undefined
+      };
+
+      console.log('📤 Frontend: Sending request');
+      console.log('📤 Frontend: API Key in request:', !!requestBody.apiKey);
+
       const response = await fetch('/api/similarity', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query: query.trim(),
-          passages: passagesArray,
-          topK: 5
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('📥 Frontend: Response status:', response.status);
 
       if (!response.ok) {
         throw new Error('Failed to calculate similarity');
       }
 
       const data = await response.json();
+      console.log('📊 Frontend: Results received:', data.results.length);
+      console.log('🔍 Frontend: Real API used:', data.usedRealAPI);
       setResults(data.results);
+      setUsedRealAPI(data.usedRealAPI);
     } catch (err) {
+      console.error('❌ Frontend: Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -126,6 +198,7 @@ export default function Home() {
         body: JSON.stringify({
           text: text,
           query: query.trim(),
+          apiKey: apiKey || undefined
         }),
       });
 
@@ -155,6 +228,113 @@ export default function Home() {
           </p>
         </div>
       </header>
+
+      {/* API Key Section */}
+      <section className="max-w-4xl mx-auto px-6 py-4">
+        <div className="gradient-card rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key">
+                <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                <path d="m21 2-9.6 9.6"></path>
+                <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+              </svg>
+              API Configuration
+            </h2>
+            <button
+              onClick={() => setShowApiKey(!showApiKey)}
+              className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            >
+              {showApiKey ? 'Hide' : 'Configure'}
+            </button>
+          </div>
+          
+          {apiKeyValid === true && (
+            <div className="flex items-center gap-2 mb-4 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <path d="m9 11 3 3L22 4"></path>
+              </svg>
+              <span className="text-sm font-medium">API Key configured successfully</span>
+              <button
+                onClick={clearApiKey}
+                className="ml-auto text-xs px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
+          {showApiKey && (
+            <form onSubmit={handleApiKeySubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Google AI Studio API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKeyValue ? "text" : "password"}
+                    value={apiKey}
+                    onChange={handleApiKeyChange}
+                    placeholder="AIzaSy..."
+                    className={`w-full px-4 py-3 pr-12 bg-white/80 dark:bg-slate-800/80 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200 ${
+                      apiKeyValid === false ? 'border-red-300 dark:border-red-600' : 
+                      apiKeyValid === true ? 'border-green-300 dark:border-green-600' : 
+                      'border-white/30 dark:border-slate-600/30'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKeyValue(!showApiKeyValue)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showApiKeyValue ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+                        <line x1="2" x2="22" y1="2" y2="22"></line>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {apiKeyValid === false && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                    Invalid API key format. Google AI keys start with &ldquo;AIza&rdquo; and are 39 characters long.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Your API key is stored locally in your browser and never sent to our servers. 
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">
+                    Get your free API key here
+                  </a>
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={!apiKeyValid}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  Save API Key
+                </button>
+                <button
+                  type="button"
+                  onClick={clearApiKey}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                >
+                  Clear
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </section>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -221,9 +401,44 @@ export default function Home() {
         {/* Results */}
         {results.length > 0 && (
           <div className="mt-12 space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Similarity Results
-            </h2>
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Similarity Results
+              </h2>
+              {usedRealAPI === true ? (
+                <div className="flex items-center justify-center gap-1 text-sm text-green-600 dark:text-green-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <path d="m9 11 3 3L22 4"></path>
+                  </svg>
+                  Using Google AI Embeddings
+                </div>
+              ) : usedRealAPI === false ? (
+                <div className="flex items-center justify-center gap-1 text-sm text-amber-600 dark:text-amber-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
+                    <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                    <rect x="9" y="9" width="6" height="6"></rect>
+                    <path d="M9 1v6"></path>
+                    <path d="M9 17v6"></path>
+                    <path d="M1 9h6"></path>
+                    <path d="M17 9h6"></path>
+                  </svg>
+                  Using Mock Embeddings (API quota exceeded or no key)
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
+                    <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                    <rect x="9" y="9" width="6" height="6"></rect>
+                    <path d="M9 1v6"></path>
+                    <path d="M9 17v6"></path>
+                    <path d="M1 9h6"></path>
+                    <path d="M17 9h6"></path>
+                  </svg>
+                  Using Mock Embeddings (Add API key for better results)
+                </div>
+              )}
+            </div>
             {results.map((result, index) => {
               // Convert cosine similarity (-1 to 1) to 0-100 scale
               // -1 -> 0, 0 -> 50, 1 -> 100
