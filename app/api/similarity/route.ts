@@ -30,8 +30,35 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error calculating similarity:', error);
+    
+    // Provide more specific error messages for different error types
+    if (error instanceof Error) {
+      if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+        return NextResponse.json(
+          { 
+            error: 'API rate limit exceeded. The system will automatically retry and fall back to mock embeddings if needed.',
+            details: 'Google AI API has rate limits. Please wait a moment and try again.'
+          },
+          { status: 429 }
+        );
+      }
+      
+      if (error.message.includes('quota') || error.message.includes('billing')) {
+        return NextResponse.json(
+          { 
+            error: 'API quota exceeded',
+            details: 'Please check your Google AI Studio billing and quota settings.'
+          },
+          { status: 402 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to calculate similarity' },
+      { 
+        error: 'Failed to calculate similarity',
+        details: 'An unexpected error occurred. Please try again.'
+      },
       { status: 500 }
     );
   }

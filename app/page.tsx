@@ -100,13 +100,21 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to calculate similarity');
+        const errorData = await response.json();
+        const errorMessage = errorData.details || errorData.error || 'An error occurred';
+        setError(errorMessage);
+        return;
       }
 
       const data = await response.json();
       setResults(data.results);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error:', err);
+      if (err instanceof Error && err.message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

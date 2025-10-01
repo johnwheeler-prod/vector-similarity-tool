@@ -6,6 +6,9 @@ A proof of concept tool for comparing passages from articles to queries using co
 
 - **Vector Embeddings**: Uses Google's EmbeddingGemma model for generating text embeddings
 - **Cosine Similarity**: Calculates semantic similarity between queries and passages
+- **Rate Limiting**: Built-in rate limiting and retry logic to handle API limits gracefully
+- **Fallback Mode**: Automatically falls back to mock embeddings when API limits are exceeded
+- **Token Suggestions**: Advanced token analysis with suggestions for improving similarity scores
 - **Modern UI**: Clean, Apple-inspired interface built with Tailwind CSS
 - **Real-time Results**: Instant similarity calculations with ranked results
 - **TypeScript**: Full type safety throughout the application

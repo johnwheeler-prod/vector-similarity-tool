@@ -11,6 +11,8 @@ export interface EmbeddingResult {
 
 export class EmbeddingService {
   private model: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private lastRequestTime: number = 0;
+  private readonly minRequestInterval: number = 100; // Minimum 100ms between requests
 
   constructor() {
     // Use the embedding model
@@ -26,12 +28,74 @@ export class EmbeddingService {
         return this.generateMockEmbedding(text);
       }
       
-      const result = await this.model.embedContent(text);
-      return result.embedding.values;
+      // Implement basic rate limiting to avoid hitting API limits
+      await this.rateLimit();
+
+      // Implement retry logic with exponential backoff for rate limiting
+      return await this.retryWithBackoff(async () => {
+        const result = await this.model.embedContent(text);
+        return result.embedding.values;
+      }, 3); // Retry up to 3 times
+
     } catch (error) {
       console.error('Error generating embedding:', error);
+      
+      // If we hit rate limits after all retries, fall back to mock embedding
+      if (error instanceof Error && error.message.includes('429')) {
+        console.log('Rate limit exceeded, falling back to mock embedding');
+        return this.generateMockEmbedding(text);
+      }
+      
       throw new Error('Failed to generate embedding');
     }
+  }
+
+  private async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>, 
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Check if it's a rate limit error
+        if (error instanceof Error && (
+          error.message.includes('429') || 
+          error.message.includes('Too Many Requests') ||
+          error.message.includes('quota')
+        )) {
+          if (attempt < maxRetries) {
+            const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+            console.log(`Rate limit hit, retrying in ${Math.round(delay)}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        
+        // For non-rate-limit errors, don't retry
+        throw error;
+      }
+    }
+
+    throw lastError!;
   }
 
   private generateMockEmbedding(text: string): number[] {
