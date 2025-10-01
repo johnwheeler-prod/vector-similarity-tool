@@ -1,10 +1,10 @@
 # Vector Similarity Tool
 
-A proof of concept tool for comparing passages from articles to queries using cosine similarity in multidimensional vector space. Built with Next.js, TypeScript, and Google's EmbeddingGemma model.
+A proof of concept tool for comparing passages from articles to queries using cosine similarity in multidimensional vector space. Built with Next.js, TypeScript, and Google's Gemini Embedding model.
 
 ## Features
 
-- **Vector Embeddings**: Uses Google's EmbeddingGemma model for generating text embeddings
+- **Vector Embeddings**: Uses Google's Gemini Embedding model (gemini-embedding-001) for generating text embeddings
 - **Cosine Similarity**: Calculates semantic similarity between queries and passages
 - **Client-Side API Keys**: Users can provide their own API keys for cost control
 - **Mock Embeddings**: N-gram hash embeddings for development without API costs
