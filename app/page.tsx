@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
-import { SimilarityResult } from '@/types';
+import { SimilarityResult, TokenSuggestion } from '@/types';
 
 // Advanced tokenization function for similarity analysis
 const tokenizeText = (text: string): string[] => {
@@ -70,6 +70,8 @@ export default function Home() {
   const [passages, setPassages] = useState('');
   const [results, setResults] = useState<SimilarityResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ [key: number]: TokenSuggestion[] }>({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,6 +109,36 @@ export default function Home() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSuggestions = async (text: string, resultIndex: number) => {
+    if (loadingSuggestions[resultIndex]) return;
+    
+    setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: true }));
+    
+    try {
+      const response = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          query: query.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions');
+      }
+
+      const data = await response.json();
+      setSuggestions(prev => ({ ...prev, [resultIndex]: data.suggestions }));
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    } finally {
+      setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: false }));
     }
   };
 
@@ -351,6 +383,59 @@ export default function Home() {
                               </span>
                             </span>
                           </div>
+                        </div>
+                        
+                        {/* Token Suggestions Section */}
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <Edit3 className="w-4 h-4" />
+                              Token Suggestions
+                            </h4>
+                            <button
+                              onClick={() => fetchSuggestions(result.text, index)}
+                              disabled={loadingSuggestions[index]}
+                              className="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
+                            >
+                              {loadingSuggestions[index] ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                'Get Suggestions'
+                              )}
+                            </button>
+                          </div>
+                          
+                          {suggestions[index] && suggestions[index].length > 0 && (
+                            <div className="space-y-2">
+                              {suggestions[index].map((suggestion, suggestionIndex) => (
+                                <div key={suggestionIndex} className="text-xs">
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    &ldquo;{suggestion.originalToken}&rdquo; →
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {suggestion.suggestions.map((suggestionText, suggestionTextIndex) => (
+                                      <span
+                                        key={suggestionTextIndex}
+                                        className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-xs hover:bg-green-200 dark:hover:bg-green-800 cursor-pointer transition-colors"
+                                        title={`Replace "${suggestion.originalToken}" with "${suggestionText}"`}
+                                      >
+                                        {suggestionText}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-gray-400 dark:text-gray-500 mt-1">
+                                    {suggestion.reason}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {suggestions[index] && suggestions[index].length === 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              No token suggestions available - all tokens match query well!
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

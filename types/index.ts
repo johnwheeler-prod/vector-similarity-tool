@@ -9,3 +9,10 @@ export interface SimilarityResponse {
   results: SimilarityResult[];
   totalPassages: number;
 }
+
+export interface TokenSuggestion {
+  originalToken: string;
+  position: number;
+  suggestions: string[];
+  reason: string;
+}
