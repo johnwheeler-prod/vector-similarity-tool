@@ -40,7 +40,7 @@ export class EmbeddingService {
     }
     
     const client = new GoogleGenerativeAI(this.apiKey || '');
-    this.model = client.getGenerativeModel({ model: 'embedding-001' });
+    this.model = client.getGenerativeModel({ model: 'gemini-embedding-001' });
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
