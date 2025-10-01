@@ -30,22 +30,32 @@ cd vector-similarity-tool
 npm install
 ```
 
-3. Create environment file:
+3. Get your Google AI Studio API key:
+   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Sign in with your Google account
+   - Click "Create API Key" 
+   - Copy the generated API key
+
+4. Create environment file:
 ```bash
+# Create .env.local file in the project root
 touch .env.local
 ```
 
-4. Add your Google API key to `.env.local`:
-```
-GOOGLE_API_KEY=your_google_api_key_here
+5. Add your Google AI API key to `.env.local`:
+```bash
+# Google AI Studio API Key
+GOOGLE_API_KEY=your_actual_api_key_here
 ```
 
-5. Run the development server:
+**Important**: Replace `your_actual_api_key_here` with the API key you copied from Google AI Studio.
+
+6. Run the development server:
 ```bash
 npm run dev
 ```
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
+7. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Usage
 
