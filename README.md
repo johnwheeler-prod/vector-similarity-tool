@@ -6,8 +6,14 @@ A proof of concept tool for comparing passages from articles to queries using co
 
 - **Vector Embeddings**: Uses Google's EmbeddingGemma model for generating text embeddings
 - **Cosine Similarity**: Calculates semantic similarity between queries and passages
+- **Client-Side API Keys**: Users can provide their own API keys for cost control
+- **Mock Embeddings**: N-gram hash embeddings for development without API costs
 - **Modern UI**: Clean, Apple-inspired interface built with Tailwind CSS
 - **Real-time Results**: Instant similarity calculations with ranked results
+- **Token Analysis**: Advanced tokenization with similarity highlighting
+- **Token Suggestions**: AI-powered suggestions for improving passage similarity
+- **Dark Mode**: Automatic system-based theme switching
+- **Security-First**: API keys stored locally, never sent to our servers
 - **TypeScript**: Full type safety throughout the application
 
 ## Getting Started
@@ -46,6 +52,47 @@ npm run dev
 ```
 
 6. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Security & Privacy
+
+### API Key Security
+- **Local Storage Only**: API keys are stored exclusively in your browser's localStorage
+- **No Server Storage**: Your API keys are never sent to or stored on our servers
+- **Client-Side Processing**: API calls are made directly from your browser to Google's servers
+- **Automatic Cleanup**: Clear your browser data to remove stored API keys
+
+### Privacy Protection
+- **No Data Collection**: We don't collect, store, or analyze your queries or passages
+- **Direct API Access**: All embedding requests go directly to Google AI Studio
+- **Transparent Processing**: Open source code allows full audit of data handling
+
+## Alternative APIs
+
+While Google AI Studio is free and easy to use, here are other embedding APIs you can use:
+
+### 1. **OpenAI Embeddings** (Recommended for Production)
+- **Cost**: $0.0001 per 1K tokens
+- **Quality**: Excellent semantic understanding
+- **Setup**: Replace Google AI with OpenAI API
+- **Rate Limits**: 3,000 RPM, 500,000 TPM
+
+### 2. **Cohere Embed** 
+- **Cost**: $0.10 per 1M tokens
+- **Quality**: Great for multilingual content
+- **Setup**: Easy API integration
+- **Rate Limits**: 1,000 requests/minute
+
+### 3. **Hugging Face Inference API**
+- **Cost**: Free tier available, then pay-per-use
+- **Quality**: Multiple model options
+- **Setup**: Simple REST API
+- **Rate Limits**: Varies by plan
+
+### 4. **Azure OpenAI**
+- **Cost**: Similar to OpenAI
+- **Quality**: Enterprise-grade reliability
+- **Setup**: Azure integration required
+- **Rate Limits**: Based on Azure tier
 
 ## Usage
 

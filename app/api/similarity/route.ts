@@ -5,7 +5,14 @@ const embeddingService = new EmbeddingService();
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, passages, topK = 5 } = await request.json();
+    const { query, passages, topK = 5, apiKey } = await request.json();
+
+    console.log('🔧 API Route called');
+    console.log('🔑 API Key received:', !!apiKey);
+    console.log('🔑 API Key length:', apiKey?.length || 0);
+    console.log('🔑 API Key preview:', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
+    console.log('📝 Query:', query?.substring(0, 50) + '...');
+    console.log('📄 Passages count:', passages?.length || 0);
 
     if (!query || !passages || !Array.isArray(passages)) {
       return NextResponse.json(
@@ -14,22 +21,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create embedding service with client-provided API key if available
+    const service = apiKey ? new EmbeddingService(apiKey) : embeddingService;
+    
+    console.log('🔧 Using service:', apiKey ? 'Client-provided API key' : 'Default service');
+
     // Generate embeddings for query and passages
+    console.log('🚀 Starting embedding generation...');
     const [queryEmbedding, passageEmbeddings] = await Promise.all([
-      embeddingService.generateEmbedding(query),
-      embeddingService.generateEmbeddings(passages)
+      service.generateEmbedding(query),
+      service.generateEmbeddings(passages)
     ]);
 
+    console.log('✅ Embeddings generated successfully');
+    console.log('📊 Query embedding dimensions:', queryEmbedding.length);
+    console.log('📊 Passage embeddings count:', passageEmbeddings.length);
+
     // Find most similar passages
-    const results = findMostSimilar(queryEmbedding, passageEmbeddings, topK);
+    const results = findMostSimilar(queryEmbedding, passageEmbeddings, passages, topK);
+    
+    console.log('🎯 Similarity calculation complete');
+    console.log('📊 Results count:', results.length);
+    console.log('🔍 Real API used:', service.wasRealAPIUsed());
     
     return NextResponse.json({ 
       query,
       results,
-      totalPassages: passages.length
+      totalPassages: passages.length,
+      usedRealAPI: service.wasRealAPIUsed()
     });
   } catch (error) {
-    console.error('Error calculating similarity:', error);
+    console.error('❌ Error calculating similarity:', error);
     return NextResponse.json(
       { error: 'Failed to calculate similarity' },
       { status: 500 }
