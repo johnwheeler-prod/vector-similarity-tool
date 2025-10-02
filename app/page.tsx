@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
-import { SimilarityResult, TokenSuggestion } from '@/types';
+import { SimilarityResult, TokenSuggestion, RerankResult, RerankResponse } from '@/types';
 import { useSession } from 'next-auth/react';
 
 // Advanced tokenization function for similarity analysis
@@ -83,6 +83,20 @@ export default function Home() {
   const [provider, setProvider] = useState<'google' | 'openai'>('google');
   const [model, setModel] = useState<'gemini-embedding-001' | 'text-embedding-3-small' | 'text-embedding-3-large'>('gemini-embedding-001');
   const [currentProvider, setCurrentProvider] = useState<string>('');
+  const [rerankProvider, setRerankProvider] = useState<'openai' | 'google-vertex' | 'mock'>('mock');
+  const [rerankModel] = useState<string>('cross-encoder-ms-marco-MiniLM-L-6-v2');
+  const [rerankApiKey, setRerankApiKey] = useState('');
+  const [showRerankApiKey, setShowRerankApiKey] = useState(false);
+  const [rerankApiKeyValid, setRerankApiKeyValid] = useState<boolean | null>(null);
+  const [showRerankApiKeyValue, setShowRerankApiKeyValue] = useState(false);
+  
+  // Reranking state
+  const [rerankResults, setRerankResults] = useState<RerankResult[]>([]);
+  const [rerankLoading, setRerankLoading] = useState(false);
+  const [rerankError, setRerankError] = useState('');
+  const [activeTab, setActiveTab] = useState<'embedding' | 'rerank'>('embedding');
+  const [rerankProviderUsed, setRerankProviderUsed] = useState<string>('');
+  const [rerankRealAPIUsed, setRerankRealAPIUsed] = useState<boolean | null>(null);
 
   // Load API key from localStorage on component mount
   React.useEffect(() => {
@@ -90,6 +104,12 @@ export default function Home() {
     if (savedApiKey) {
       setApiKey(savedApiKey);
       setApiKeyValid(true);
+    }
+    
+    const savedRerankApiKey = localStorage.getItem('rerank_api_key');
+    if (savedRerankApiKey) {
+      setRerankApiKey(savedRerankApiKey);
+      setRerankApiKeyValid(true);
     }
   }, []);
 
@@ -104,6 +124,16 @@ export default function Home() {
       return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
     }
     return false;
+  };
+
+  // Validate rerank API key format based on rerank provider
+  const validateRerankApiKey = (key: string): boolean => {
+    if (rerankProvider === 'openai') {
+      return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
+    } else if (rerankProvider === 'google-vertex') {
+      return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+    }
+    return true; // Mock provider doesn't need validation
   };
 
   // Handle API key input
@@ -135,6 +165,44 @@ export default function Home() {
     setApiKeyValid(null);
     localStorage.removeItem('google_ai_api_key');
     setError('');
+  };
+
+  // Handle rerank API key input
+  const handleRerankApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = e.target.value;
+    setRerankApiKey(key);
+    setRerankApiKeyValid(key ? validateRerankApiKey(key) : null);
+  };
+
+  // Save rerank API key
+  const handleRerankApiKeySubmit = () => {
+    if (rerankApiKeyValid) {
+      localStorage.setItem('rerank_api_key', rerankApiKey);
+      setShowRerankApiKey(false);
+    }
+  };
+
+  // Clear rerank API key
+  const clearRerankApiKey = () => {
+    setRerankApiKey('');
+    setRerankApiKeyValid(null);
+    localStorage.removeItem('rerank_api_key');
+  };
+
+  // Handle rerank provider change
+  const handleRerankProviderChange = (newProvider: 'openai' | 'google-vertex' | 'mock') => {
+    setRerankProvider(newProvider);
+    // Clear rerank results when changing provider
+    setRerankResults([]);
+    setRerankError('');
+    setRerankProviderUsed('');
+    setRerankRealAPIUsed(null);
+    // Reset API key validation if switching away from mock
+    if (newProvider === 'mock') {
+      setRerankApiKeyValid(true);
+    } else {
+      setRerankApiKeyValid(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,6 +265,13 @@ export default function Home() {
       setResults(data.results);
       setUsedRealAPI(data.usedRealAPI);
       setCurrentProvider(data.provider || provider);
+      
+      // Reset rerank results when new embedding results come in
+      setRerankResults([]);
+      setRerankError('');
+      setRerankProviderUsed('');
+      setRerankRealAPIUsed(null);
+      setActiveTab('embedding');
     } catch (err) {
       console.error('❌ Frontend: Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -238,6 +313,72 @@ export default function Home() {
       console.error('Error fetching suggestions:', error);
     } finally {
       setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: false }));
+    }
+  };
+
+  // Reranking function - sends top candidate from embedding step to rerank step
+  const handleRerank = async () => {
+    if (!results.length) {
+      setRerankError('No embedding results available for reranking');
+      return;
+    }
+
+    setRerankLoading(true);
+    setRerankError('');
+
+    try {
+      // Get the top candidate from embedding results
+      const topCandidate = results[0]; // Highest similarity score
+      const topPassages = results.slice(0, 3); // Top 3 for reranking context
+      
+      console.log('🔄 Frontend: Starting reranking process');
+      console.log('🔄 Frontend: Top candidate:', topCandidate.text.substring(0, 50) + '...');
+      console.log('🔄 Frontend: Reranking top', topPassages.length, 'passages');
+
+      const requestBody = {
+        query: query.trim(),
+        passages: topPassages.map(r => r.text),
+        provider: provider,
+        model: model,
+        apiKey: apiKey || undefined,
+        rerankProvider: rerankProvider,
+        rerankModel: rerankModel,
+        rerankApiKey: rerankApiKey || undefined
+      };
+
+      // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint
+      const endpoint = session ? '/api/rerank' : '/api/rerank-legacy';
+      console.log('📡 Frontend: Using rerank endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📥 Frontend: Rerank response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error('Failed to rerank passages');
+      }
+
+      const data: RerankResponse = await response.json();
+      console.log('📊 Frontend: Rerank results received:', data.results.length);
+      console.log('🔍 Frontend: Rerank API used:', data.usedRealAPI);
+      console.log('🔧 Frontend: Rerank provider used:', data.rerankProvider);
+      
+      setRerankResults(data.results);
+      setRerankError('');
+      setRerankProviderUsed(data.rerankProvider || rerankProvider);
+      setRerankRealAPIUsed(data.usedRealAPI);
+      setActiveTab('rerank'); // Switch to rerank tab to show results
+    } catch (err) {
+      console.error('❌ Frontend: Rerank error:', err);
+      setRerankError(err instanceof Error ? err.message : 'An error occurred during reranking');
+    } finally {
+      setRerankLoading(false);
     }
   };
 
@@ -579,11 +720,401 @@ export default function Home() {
                 </div>
               )}
             </div>
-            {results.map((result, index) => {
-              // Convert cosine similarity (-1 to 1) to 0-100 scale
-              // -1 -> 0, 0 -> 50, 1 -> 100
-              const normalizedScore = Math.round(((result.similarity + 1) / 2) * 100);
-              const clampedScore = Math.max(0, Math.min(100, normalizedScore));
+
+            {/* Reranker Status Indicator */}
+            {rerankResults.length > 0 && (
+              <div className="text-center mb-6">
+                {rerankRealAPIUsed === true ? (
+                  <div className="flex items-center justify-center gap-1 text-sm text-green-600 dark:text-green-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <path d="m9 11 3 3L22 4"></path>
+                    </svg>
+                    Using {rerankProviderUsed === 'openai' ? 'OpenAI' : rerankProviderUsed === 'google-vertex' ? 'Google Vertex AI' : 'Mock'} Reranker
+                  </div>
+                ) : rerankRealAPIUsed === false ? (
+                  <div className="flex items-center justify-center gap-1 text-sm text-amber-600 dark:text-amber-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
+                      <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                      <rect x="9" y="9" width="6" height="6"></rect>
+                      <path d="M9 1v6"></path>
+                      <path d="M9 17v6"></path>
+                      <path d="M1 9h6"></path>
+                      <path d="M17 9h6"></path>
+                    </svg>
+                    Using Mock Reranker ({rerankProviderUsed === 'openai' ? 'OpenAI' : rerankProviderUsed === 'google-vertex' ? 'Google Vertex AI' : 'Mock'} API quota exceeded or no key)
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-1 text-sm text-purple-600 dark:text-purple-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
+                      <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                      <rect x="9" y="9" width="6" height="6"></rect>
+                      <path d="M9 1v6"></path>
+                      <path d="M9 17v6"></path>
+                      <path d="M1 9h6"></path>
+                      <path d="M17 9h6"></path>
+                    </svg>
+                    Using Mock Reranker (Add {rerankProviderUsed === 'openai' ? 'OpenAI' : rerankProviderUsed === 'google-vertex' ? 'Google Vertex AI' : 'Mock'} API key for better results)
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tabbed Interface */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+              {/* Tab Headers */}
+              <div className="flex border-b border-gray-200 dark:border-slate-700">
+                <button
+                  onClick={() => setActiveTab('embedding')}
+                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                    activeTab === 'embedding'
+                      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-600 dark:border-blue-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                      <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
+                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    Embedding Results
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('rerank')}
+                  disabled={!results.length}
+                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                    activeTab === 'rerank'
+                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-b-2 border-purple-600 dark:border-purple-400'
+                      : results.length
+                      ? 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M7 12h10"></path>
+                      <path d="M10 18h4"></path>
+                    </svg>
+                    Reranking
+                    {!results.length && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500">(requires embedding results)</span>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="p-6">
+                {activeTab === 'embedding' && (
+                  <div className="space-y-4">
+                    {results.length > 0 && (
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {results.length} results from embedding similarity
+                        </span>
+                      </div>
+                    )}
+                    {results.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Results Yet</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Run a similarity search to see embedding results here
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'rerank' && (
+                  <div className="space-y-4">
+                    {/* Rerank Provider Selection */}
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/50">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                          <path d="M3 6h18"></path>
+                          <path d="M7 12h10"></path>
+                          <path d="M10 18h4"></path>
+                        </svg>
+                        Rerank Provider
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          onClick={() => handleRerankProviderChange('mock')}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                            rerankProvider === 'mock'
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                          }`}
+                        >
+                          <div className="text-xs font-medium mb-1">Mock</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Free testing</div>
+                        </button>
+                        <button
+                          onClick={() => handleRerankProviderChange('openai')}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                            rerankProvider === 'openai'
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                          }`}
+                        >
+                          <div className="text-xs font-medium mb-1">OpenAI</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Cross-encoder</div>
+                        </button>
+                        <button
+                          onClick={() => handleRerankProviderChange('google-vertex')}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                            rerankProvider === 'google-vertex'
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                          }`}
+                        >
+                          <div className="text-xs font-medium mb-1">Google</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Vertex AI</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Rerank API Key Configuration */}
+                    {rerankProvider !== 'mock' && (
+                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/50">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <circle cx="12" cy="16" r="1"></circle>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                          {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API Key
+                        </h4>
+                        
+                        {!showRerankApiKey ? (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {rerankApiKeyValid ? (
+                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                                    <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                                    <path d="M13 12h3a2 2 0 0 1 2 2v1"></path>
+                                    <path d="M13 12h-3a2 2 0 0 0-2 2v1"></path>
+                                  </svg>
+                                  <span className="text-sm font-medium">
+                                    {showRerankApiKeyValue ? rerankApiKey : '••••••••••••••••'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <circle cx="12" cy="16" r="1"></circle>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                  </svg>
+                                  <span className="text-sm">No API key configured</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {rerankApiKeyValid && (
+                                <button
+                                  onClick={() => setShowRerankApiKeyValue(!showRerankApiKeyValue)}
+                                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                >
+                                  {showRerankApiKeyValue ? 'Hide' : 'Show'}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setShowRerankApiKey(true)}
+                                className="text-xs bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-lg transition-colors"
+                              >
+                                {rerankApiKeyValid ? 'Change' : 'Add'} API Key
+                              </button>
+                              {rerankApiKeyValid && (
+                                <button
+                                  onClick={clearRerankApiKey}
+                                  className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div>
+                              <input
+                                type="password"
+                                value={rerankApiKey}
+                                onChange={handleRerankApiKeyChange}
+                                placeholder={`Enter your ${rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key`}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+                              {rerankApiKeyValid === false && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Invalid {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key format
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {rerankProvider === 'openai' ? (
+                                  <>Get your OpenAI API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">OpenAI Platform</a></>
+                                ) : (
+                                  <>Get your Google Vertex AI key from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Google Cloud Console</a></>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setShowRerankApiKey(false)}
+                                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={handleRerankApiKeySubmit}
+                                  disabled={!rerankApiKeyValid}
+                                  className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded-lg transition-colors"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {rerankError && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                        <p className="text-red-800 dark:text-red-200 text-sm">{rerankError}</p>
+                      </div>
+                    )}
+
+                    {rerankResults.length === 0 && !rerankLoading && (
+                      <div className="space-y-6">
+                        {!results.length ? (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500">
+                                <path d="M3 6h18"></path>
+                                <path d="M7 12h10"></path>
+                                <path d="M10 18h4"></path>
+                              </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Embedding Results</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Complete an embedding search first to enable reranking
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 dark:text-purple-400">
+                                <path d="M3 6h18"></path>
+                                <path d="M7 12h10"></path>
+                                <path d="M10 18h4"></path>
+                              </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready for Reranking</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                              {rerankProvider === 'mock' 
+                                ? 'Use mock cross-encoder for testing without API costs'
+                                : `Configure your ${rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key and start reranking to improve results`
+                              }
+                            </p>
+                            
+                            {/* Show rerank button only if conditions are met */}
+                            {(rerankProvider === 'mock' || rerankApiKeyValid) && (
+                              <button
+                                onClick={handleRerank}
+                                disabled={rerankLoading}
+                                className="btn-primary bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                              >
+                                {rerankLoading ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Reranking...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M3 6h18"></path>
+                                      <path d="M7 12h10"></path>
+                                      <path d="M10 18h4"></path>
+                                    </svg>
+                                    Start Reranking
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            
+                            {/* Show message if API key is required but not configured */}
+                            {rerankProvider !== 'mock' && !rerankApiKeyValid && (
+                              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mt-4">
+                                <div className="flex items-center gap-2">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 dark:text-yellow-400">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                  </svg>
+                                  <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                                    {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key required
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {rerankLoading && (
+                      <div className="text-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin text-purple-600 dark:text-purple-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Reranking your results...</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Results Display - Show based on active tab */}
+            {((activeTab === 'embedding' && results.length > 0) || 
+              (activeTab === 'rerank' && rerankResults.length > 0)) && 
+            (rerankResults.length > 0 && activeTab === 'rerank' ? rerankResults : results).map((result, index) => {
+              // Handle both regular results and rerank results
+              const isRerankResult = 'rerankScore' in result;
+              const embeddingScore = isRerankResult ? result.embeddingScore : result.similarity;
+              const finalScore = isRerankResult ? result.finalScore : result.similarity;
+              
+              // Handle score conversion based on result type
+              let normalizedEmbeddingScore: number;
+              let normalizedFinalScore: number;
+              
+              if (isRerankResult) {
+                // Rerank results are already on 0-100 scale
+                normalizedEmbeddingScore = Math.round(embeddingScore);
+                normalizedFinalScore = Math.round(finalScore);
+              } else {
+                // Regular embedding results need conversion from cosine similarity (-1 to 1) to 0-100 scale
+                normalizedEmbeddingScore = Math.round(((embeddingScore + 1) / 2) * 100);
+                normalizedFinalScore = Math.round(((finalScore + 1) / 2) * 100);
+              }
+              
+              const clampedScore = Math.max(0, Math.min(100, normalizedFinalScore));
               
               // Calculate circumference for proper stroke-dasharray
               const circumference = 2 * Math.PI * 15.9155;
@@ -619,9 +1150,25 @@ export default function Home() {
                   className="gradient-card rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
                 >
                   <div className="flex items-start justify-between mb-6">
-                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-full border border-blue-200 dark:border-blue-700">
-                      Rank #{index + 1}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold px-4 py-2 rounded-full border ${
+                        isRerankResult 
+                          ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700'
+                          : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
+                      }`}>
+                        {isRerankResult ? `Reranked #${result.rank}` : `Rank #${index + 1}`}
+                      </span>
+                      {isRerankResult && (
+                        <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-700">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M7 12h10"></path>
+                            <path d="M10 18h4"></path>
+                          </svg>
+                          Cross-encoder
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center space-x-3">
                       {/* Circular Gauge */}
                       <div className="relative w-12 h-12 flex-shrink-0">
@@ -669,6 +1216,41 @@ export default function Home() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Score Breakdown for Rerank Results */}
+                  {isRerankResult && (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 mb-6 border border-purple-200/50 dark:border-purple-700/50">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                          <path d="M3 6h18"></path>
+                          <path d="M7 12h10"></path>
+                          <path d="M10 18h4"></path>
+                        </svg>
+                        Score Breakdown
+                      </h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Embedding</div>
+                          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {normalizedEmbeddingScore}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cross-encoder</div>
+                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                            {Math.round(result.rerankScore)}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Final</div>
+                          <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {normalizedFinalScore}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     {/* Original text */}
                     <div>
