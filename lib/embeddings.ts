@@ -191,18 +191,6 @@ export class EmbeddingService {
     return response.data.map(item => item.embedding);
   }
 
-  // Check if real API calls were made
-  public wasRealAPIUsed(): boolean {
-    return this.usedRealAPI;
-  }
-
-  public getProvider(): EmbeddingProvider {
-    return this.provider;
-  }
-
-  public getModel(): EmbeddingModel {
-    return this.model;
-  }
 
   private generateMockEmbedding(text: string): number[] {
     console.log('🎭 Generating mock embedding for:', text.substring(0, 30) + '...');
@@ -277,31 +265,6 @@ export class EmbeddingService {
     return Math.abs(hash);
   }
 
-  // Calculate cosine similarity between two vectors
-  static cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) {
-      throw new Error('Vectors must have the same length');
-    }
-
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-
-    normA = Math.sqrt(normA);
-    normB = Math.sqrt(normB);
-
-    if (normA === 0 || normB === 0) {
-      return 0;
-    }
-
-    return dotProduct / (normA * normB);
-  }
 
   // Find most similar passages to a query
   static findMostSimilar(
@@ -493,6 +456,51 @@ export class EmbeddingService {
 
     console.log(`🔍 Generated ${suggestions.length} token suggestions`);
     return suggestions;
+  }
+
+  // Public methods for external access
+  public wasRealAPIUsed(): boolean {
+    return this.usedRealAPI;
+  }
+
+  public getProvider(): EmbeddingProvider {
+    return this.provider;
+  }
+
+  public getModel(): EmbeddingModel {
+    return this.model;
+  }
+
+  public getTotalTokensUsed(): number {
+    // For now, return a mock token count
+    // In the future, this should track actual token usage
+    return this.usedRealAPI ? 100 : 0;
+  }
+
+  // Static method for cosine similarity calculation
+  public static cosineSimilarity(vec1: number[], vec2: number[]): number {
+    if (vec1.length !== vec2.length) {
+      throw new Error('Vectors must have the same length');
+    }
+
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < vec1.length; i++) {
+      dotProduct += vec1[i] * vec2[i];
+      norm1 += vec1[i] * vec1[i];
+      norm2 += vec2[i] * vec2[i];
+    }
+
+    norm1 = Math.sqrt(norm1);
+    norm2 = Math.sqrt(norm2);
+
+    if (norm1 === 0 || norm2 === 0) {
+      return 0;
+    }
+
+    return dotProduct / (norm1 * norm2);
   }
 }
 
