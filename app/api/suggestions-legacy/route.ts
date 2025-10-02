@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmbeddingService, EmbeddingProvider, EmbeddingModel } from '@/lib/embeddings';
 
-const embeddingService = new EmbeddingService();
-
+// Legacy route for backward compatibility - no authentication required
 export async function POST(request: NextRequest) {
   try {
     const { 
@@ -13,13 +12,10 @@ export async function POST(request: NextRequest) {
       model = 'gemini-embedding-001' 
     } = await request.json();
 
-    console.log('🔧 Suggestions API Route called');
+    console.log('🔧 Legacy Suggestions API Route called');
     console.log('🔧 Provider:', provider);
     console.log('🔧 Model:', model);
     console.log('🔑 API Key received:', !!apiKey);
-    console.log('🔑 API Key length:', apiKey?.length || 0);
-    console.log('📝 Text:', text?.substring(0, 50) + '...');
-    console.log('🔍 Query:', query?.substring(0, 50) + '...');
 
     if (!text || !query) {
       return NextResponse.json(
@@ -28,18 +24,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create embedding service with specified provider and client-provided API key if available
+    // Create embedding service with client-provided API key if available
     const service = apiKey ? 
       new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel, apiKey) : 
-      embeddingService;
+      new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel);
     
     console.log('🔧 Using service:', apiKey ? `Client-provided ${provider.toUpperCase()} API key` : 'Default service');
     
     // Generate token suggestions for improving semantic similarity
     const suggestions = service.generateTokenSuggestions(text, query);
-
-    console.log('✅ Token suggestions generated');
-    console.log('📊 Suggestions count:', suggestions.length);
 
     return NextResponse.json({
       text,

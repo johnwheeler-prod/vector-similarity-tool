@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
 import { SimilarityResult, TokenSuggestion } from '@/types';
+import { useSession } from 'next-auth/react';
 
 // Advanced tokenization function for similarity analysis
 const tokenizeText = (text: string): string[] => {
@@ -66,6 +67,7 @@ const getModificationSuggestions = (text: string, query: string) => {
 };
 
 export default function Home() {
+  const { data: session } = useSession();
   const [query, setQuery] = useState('');
   const [passages, setPassages] = useState('');
   const [results, setResults] = useState<SimilarityResult[]>([]);
@@ -78,6 +80,9 @@ export default function Home() {
   const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
   const [showApiKeyValue, setShowApiKeyValue] = useState(false);
   const [usedRealAPI, setUsedRealAPI] = useState<boolean | null>(null);
+  const [provider, setProvider] = useState<'google' | 'openai'>('google');
+  const [model, setModel] = useState<'gemini-embedding-001' | 'text-embedding-3-small' | 'text-embedding-3-large'>('gemini-embedding-001');
+  const [currentProvider, setCurrentProvider] = useState<string>('');
 
   // Load API key from localStorage on component mount
   React.useEffect(() => {
@@ -88,10 +93,17 @@ export default function Home() {
     }
   }, []);
 
-  // Validate API key format
+  // Validate API key format based on provider
   const validateApiKey = (key: string): boolean => {
-    // Google AI API keys typically start with "AIza" and are 39 characters long
-    return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+    if (provider === 'google') {
+      // Google AI API keys typically start with "AIza" and are 39 characters long
+      return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+    } else if (provider === 'openai') {
+      // OpenAI API keys start with "sk-" and can contain alphanumeric chars, hyphens, and underscores
+      // Length can vary from ~48 to 164+ characters
+      return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
+    }
+    return false;
   };
 
   // Handle API key input
@@ -151,13 +163,19 @@ export default function Home() {
         query: query.trim(),
         passages: passagesArray,
         topK: 5,
-        apiKey: apiKey || undefined
+        apiKey: apiKey || undefined,
+        provider: provider,
+        model: model
       };
 
       console.log('📤 Frontend: Sending request');
       console.log('📤 Frontend: API Key in request:', !!requestBody.apiKey);
 
-      const response = await fetch('/api/similarity', {
+            // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint
+            const endpoint = session ? '/api/similarity' : '/api/similarity-legacy';
+            console.log('📡 Frontend: Using endpoint:', endpoint);
+            
+            const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,8 +192,11 @@ export default function Home() {
       const data = await response.json();
       console.log('📊 Frontend: Results received:', data.results.length);
       console.log('🔍 Frontend: Real API used:', data.usedRealAPI);
+      console.log('🔧 Frontend: Provider used:', data.provider);
+      console.log('🔧 Frontend: Model used:', data.model);
       setResults(data.results);
       setUsedRealAPI(data.usedRealAPI);
+      setCurrentProvider(data.provider || provider);
     } catch (err) {
       console.error('❌ Frontend: Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -190,7 +211,10 @@ export default function Home() {
     setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: true }));
     
     try {
-      const response = await fetch('/api/suggestions', {
+      // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint  
+      const endpoint = session ? '/api/suggestions' : '/api/suggestions-legacy';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +222,9 @@ export default function Home() {
         body: JSON.stringify({
           text: text,
           query: query.trim(),
-          apiKey: apiKey || undefined
+          apiKey: apiKey || undefined,
+          provider: provider,
+          model: model
         }),
       });
 
@@ -228,6 +254,112 @@ export default function Home() {
           </p>
         </div>
       </header>
+
+      {/* Provider Selection */}
+      <section className="max-w-4xl mx-auto px-6 py-4">
+        <div className="gradient-card rounded-2xl p-6 shadow-xl">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <path d="M9 1v6"></path>
+              <path d="M9 17v6"></path>
+              <path d="M1 9h6"></path>
+              <path d="M17 9h6"></path>
+            </svg>
+            Embedding Provider
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Google AI Option */}
+            <div 
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                provider === 'google' 
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+              onClick={() => {
+                setProvider('google');
+                setModel('gemini-embedding-001');
+                setApiKey('');
+                setApiKeyValid(null);
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">G</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 dark:text-white">Google AI</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Gemini Embedding</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Free tier available, good for development
+              </p>
+            </div>
+
+            {/* OpenAI Option */}
+            <div 
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                provider === 'openai' 
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+              onClick={() => {
+                setProvider('openai');
+                setModel('text-embedding-3-small');
+                setApiKey('');
+                setApiKeyValid(null);
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">O</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 dark:text-white">OpenAI</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Text Embedding 3</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                High quality, pay-per-use pricing
+              </p>
+            </div>
+          </div>
+
+          {/* Model Selection for OpenAI */}
+          {provider === 'openai' && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Model Size
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setModel('text-embedding-3-small')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    model === 'text-embedding-3-small'
+                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Small (1536 dim)
+                </button>
+                <button
+                  onClick={() => setModel('text-embedding-3-large')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    model === 'text-embedding-3-large'
+                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Large (3072 dim)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* API Key Section */}
       <section className="max-w-4xl mx-auto px-6 py-4">
@@ -269,14 +401,14 @@ export default function Home() {
             <form onSubmit={handleApiKeySubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Google AI Studio API Key
+                  {provider === 'google' ? 'Google AI Studio API Key' : 'OpenAI API Key'}
                 </label>
                 <div className="relative">
                   <input
                     type={showApiKeyValue ? "text" : "password"}
                     value={apiKey}
                     onChange={handleApiKeyChange}
-                    placeholder="AIzaSy..."
+                    placeholder={provider === 'google' ? "AIzaSy..." : "sk-..."}
                     className={`w-full px-4 py-3 pr-12 bg-white/80 dark:bg-slate-800/80 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200 ${
                       apiKeyValid === false ? 'border-red-300 dark:border-red-600' : 
                       apiKeyValid === true ? 'border-green-300 dark:border-green-600' : 
@@ -305,13 +437,21 @@ export default function Home() {
                 </div>
                 {apiKeyValid === false && (
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                    Invalid API key format. Google AI keys start with &ldquo;AIza&rdquo; and are 39 characters long.
+                    Invalid API key format. {provider === 'google' 
+                      ? 'Google AI keys start with "AIza" and are 39 characters long.'
+                      : 'OpenAI keys start with "sk-" and are typically 48-164+ characters long.'
+                    }
                   </p>
                 )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Your API key is stored locally in your browser and never sent to our servers. 
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">
-                    Get your free API key here
+                  <a 
+                    href={provider === 'google' ? "https://aistudio.google.com/app/apikey" : "https://platform.openai.com/api-keys"} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 dark:text-blue-400 hover:underline ml-1"
+                  >
+                    Get your {provider === 'google' ? 'free' : ''} API key here
                   </a>
                 </p>
               </div>
@@ -411,7 +551,7 @@ export default function Home() {
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <path d="m9 11 3 3L22 4"></path>
                   </svg>
-                  Using Google AI Embeddings
+                  Using {currentProvider === 'google' ? 'Google AI' : 'OpenAI'} Embeddings
                 </div>
               ) : usedRealAPI === false ? (
                 <div className="flex items-center justify-center gap-1 text-sm text-amber-600 dark:text-amber-400">
@@ -423,7 +563,7 @@ export default function Home() {
                     <path d="M1 9h6"></path>
                     <path d="M17 9h6"></path>
                   </svg>
-                  Using Mock Embeddings (API quota exceeded or no key)
+                  Using Mock Embeddings ({currentProvider === 'google' ? 'Google AI' : 'OpenAI'} API quota exceeded or no key)
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -435,7 +575,7 @@ export default function Home() {
                     <path d="M1 9h6"></path>
                     <path d="M17 9h6"></path>
                   </svg>
-                  Using Mock Embeddings (Add API key for better results)
+                  Using Mock Embeddings (Add {currentProvider === 'google' ? 'Google AI' : 'OpenAI'} API key for better results)
                 </div>
               )}
             </div>
