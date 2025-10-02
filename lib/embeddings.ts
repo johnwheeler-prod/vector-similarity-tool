@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { TokenSuggestion } from '@/types';
+
+export type EmbeddingProvider = 'google' | 'openai';
+export type EmbeddingModel = 'gemini-embedding-001' | 'text-embedding-3-small' | 'text-embedding-3-large';
 
 export interface EmbeddingResult {
   embedding: number[];
@@ -13,17 +17,23 @@ export interface SimilarityResult {
 }
 
 export class EmbeddingService {
-  private model: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private googleModel: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private openaiClient: OpenAI | null = null;
+  private provider: EmbeddingProvider;
+  private model: EmbeddingModel;
   private apiKey: string | undefined;
   private usedRealAPI: boolean = false;
 
-  constructor(apiKey?: string) {
-    // Use provided API key or fall back to environment variable
-    this.apiKey = apiKey || process.env.GOOGLE_API_KEY;
+  constructor(provider: EmbeddingProvider = 'google', model: EmbeddingModel = 'gemini-embedding-001', apiKey?: string) {
+    this.provider = provider;
+    this.model = model;
+    this.apiKey = apiKey || this.getDefaultApiKey(provider);
     
     console.log('🔧 EmbeddingService constructor called');
+    console.log('🔧 Provider:', provider);
+    console.log('🔧 Model:', model);
     console.log('🔑 API Key provided:', !!apiKey);
-    console.log('🔑 Environment API Key exists:', !!process.env.GOOGLE_API_KEY);
+    console.log('🔑 Environment API Key exists:', !!this.apiKey);
     console.log('🔑 Final API Key length:', this.apiKey?.length || 0);
     console.log('🔑 API Key preview:', this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'None');
     
@@ -31,16 +41,55 @@ export class EmbeddingService {
       console.log('⚠️ No API key found - will use mock embeddings');
     } else {
       console.log('✅ API key found - will attempt real API calls');
-      // Validate API key format
-      if (!/^AIza[0-9A-Za-z_-]{35}$/.test(this.apiKey)) {
-        console.log('❌ Invalid API key format detected');
-      } else {
-        console.log('✅ API key format is valid');
-      }
+      this.validateApiKey();
     }
     
-    const client = new GoogleGenerativeAI(this.apiKey || '');
-    this.model = client.getGenerativeModel({ model: 'gemini-embedding-001' });
+    this.initializeProvider();
+  }
+
+  private getDefaultApiKey(provider: EmbeddingProvider): string | undefined {
+    if (provider === 'google') {
+      return process.env.GOOGLE_API_KEY;
+    } else if (provider === 'openai') {
+      return process.env.OPENAI_API_KEY;
+    }
+    return undefined;
+  }
+
+  private validateApiKey(): void {
+    if (this.provider === 'google') {
+      if (!/^AIza[0-9A-Za-z_-]{35}$/.test(this.apiKey || '')) {
+        console.log('❌ Invalid Google AI API key format detected');
+      } else {
+        console.log('✅ Google AI API key format is valid');
+      }
+    } else if (this.provider === 'openai') {
+      // OpenAI keys start with "sk-" and can contain alphanumeric chars, hyphens, and underscores
+      // Length can vary from ~48 to 164+ characters
+      if (!/^sk-[0-9A-Za-z_-]{20,200}$/.test(this.apiKey || '')) {
+        console.log('❌ Invalid OpenAI API key format detected');
+      } else {
+        console.log('✅ OpenAI API key format is valid');
+      }
+    }
+  }
+
+  private initializeProvider(): void {
+    if (!this.apiKey) {
+      console.log('⚠️ No API key - providers not initialized');
+      return;
+    }
+
+    if (this.provider === 'google') {
+      const client = new GoogleGenerativeAI(this.apiKey);
+      this.googleModel = client.getGenerativeModel({ model: this.model as 'gemini-embedding-001' });
+      console.log('🔧 Google AI client initialized');
+    } else if (this.provider === 'openai') {
+      this.openaiClient = new OpenAI({
+        apiKey: this.apiKey,
+      });
+      console.log('🔧 OpenAI client initialized');
+    }
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -52,23 +101,44 @@ export class EmbeddingService {
     }
     
     try {
-      console.log('🌐 Making API call to Google AI...');
+      console.log(`🌐 Making API call to ${this.provider.toUpperCase()}...`);
       const startTime = Date.now();
       
-      const result = await this.model.embedContent(text);
+      let result: number[];
+      
+      if (this.provider === 'google') {
+        result = await this.generateGoogleEmbedding(text);
+      } else if (this.provider === 'openai') {
+        result = await this.generateOpenAIEmbedding(text);
+      } else {
+        throw new Error(`Unsupported provider: ${this.provider}`);
+      }
       
       const duration = Date.now() - startTime;
-      console.log(`✅ Google AI API call successful (${duration}ms)`);
-      console.log(`📊 Embedding dimensions: ${result.embedding.values.length}`);
-      console.log(`📊 First few values:`, result.embedding.values.slice(0, 5));
+      console.log(`✅ ${this.provider.toUpperCase()} API call successful (${duration}ms)`);
+      console.log(`📊 Embedding dimensions: ${result.length}`);
+      console.log(`📊 First few values:`, result.slice(0, 5));
       
       this.usedRealAPI = true;
-      return result.embedding.values;
+      return result;
     } catch (error) {
-      console.error('❌ Google AI API call failed:', error);
+      console.error(`❌ ${this.provider.toUpperCase()} API call failed:`, error);
       console.log('🔄 Falling back to mock embedding');
       return this.generateMockEmbedding(text);
     }
+  }
+
+  private async generateGoogleEmbedding(text: string): Promise<number[]> {
+    const result = await this.googleModel.embedContent(text);
+    return result.embedding.values;
+  }
+
+  private async generateOpenAIEmbedding(text: string): Promise<number[]> {
+    const response = await this.openaiClient!.embeddings.create({
+      model: this.model as 'text-embedding-3-small' | 'text-embedding-3-large',
+      input: text,
+    });
+    return response.data[0].embedding;
   }
 
   async generateEmbeddings(texts: string[]): Promise<number[][]> {
@@ -80,29 +150,58 @@ export class EmbeddingService {
     }
     
     try {
-      console.log('🌐 Making batch API call to Google AI...');
+      console.log(`🌐 Making batch API call to ${this.provider.toUpperCase()}...`);
       const startTime = Date.now();
       
-      const results = await Promise.all(
-        texts.map(text => this.model.embedContent(text))
-      );
+      let results: number[][];
+      
+      if (this.provider === 'google') {
+        results = await this.generateGoogleEmbeddings(texts);
+      } else if (this.provider === 'openai') {
+        results = await this.generateOpenAIEmbeddings(texts);
+      } else {
+        throw new Error(`Unsupported provider: ${this.provider}`);
+      }
       
       const duration = Date.now() - startTime;
-      console.log(`✅ Google AI batch API call successful (${duration}ms)`);
+      console.log(`✅ ${this.provider.toUpperCase()} batch API call successful (${duration}ms)`);
       console.log(`📊 Generated ${results.length} embeddings`);
       
       this.usedRealAPI = true;
-      return results.map(result => result.embedding.values);
+      return results;
     } catch (error) {
-      console.error('❌ Google AI batch API call failed:', error);
+      console.error(`❌ ${this.provider.toUpperCase()} batch API call failed:`, error);
       console.log('🔄 Falling back to mock embeddings');
       return texts.map(text => this.generateMockEmbedding(text));
     }
   }
 
+  private async generateGoogleEmbeddings(texts: string[]): Promise<number[][]> {
+    const results = await Promise.all(
+      texts.map(text => this.googleModel.embedContent(text))
+    );
+    return results.map(result => result.embedding.values);
+  }
+
+  private async generateOpenAIEmbeddings(texts: string[]): Promise<number[][]> {
+    const response = await this.openaiClient!.embeddings.create({
+      model: this.model as 'text-embedding-3-small' | 'text-embedding-3-large',
+      input: texts,
+    });
+    return response.data.map(item => item.embedding);
+  }
+
   // Check if real API calls were made
   public wasRealAPIUsed(): boolean {
     return this.usedRealAPI;
+  }
+
+  public getProvider(): EmbeddingProvider {
+    return this.provider;
+  }
+
+  public getModel(): EmbeddingModel {
+    return this.model;
   }
 
   private generateMockEmbedding(text: string): number[] {
@@ -115,15 +214,19 @@ export class EmbeddingService {
     // Combine character and word n-grams
     const allNGrams = [...nGrams, ...wordNGrams];
     
-    // Create a 768-dimensional embedding (matching Google's embedding-001)
-    const embedding = new Array(768).fill(0);
+    // Create a dimension size based on the provider (OpenAI uses different dimensions)
+    const dimensions = this.provider === 'openai' ? 
+      (this.model === 'text-embedding-3-large' ? 3072 : 1536) : 768;
+    
+    // Create embedding
+    const embedding = new Array(dimensions).fill(0);
     
     // Distribute n-gram features across dimensions
     allNGrams.forEach(ngram => {
       const hash = this.hashString(ngram);
       // Use multiple dimensions for each n-gram to create richer representations
       for (let i = 0; i < 8; i++) {
-        const dimension = (hash + i * 97) % 768; // Distribute across dimensions
+        const dimension = (hash + i * 97) % dimensions; // Distribute across dimensions
         const value = Math.sin(hash + i) * (1 / Math.sqrt(allNGrams.length)); // Normalize by n-gram count
         embedding[dimension] += value;
       }
@@ -137,7 +240,7 @@ export class EmbeddingService {
       }
     }
     
-    console.log('🎭 Mock embedding generated, dimensions:', embedding.length);
+    console.log(`🎭 Mock embedding generated, dimensions: ${embedding.length}`);
     return embedding;
   }
 
