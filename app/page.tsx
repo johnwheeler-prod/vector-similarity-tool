@@ -1,70 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, FileText, BarChart3, Loader2, Edit3 } from 'lucide-react';
-import { SimilarityResult, TokenSuggestion, RerankResult, RerankResponse } from '@/types';
+import { Search, FileText, BarChart3, Loader2 } from 'lucide-react';
+import { SimilarityResult, RerankResult, RerankResponse } from '@/types';
 import { useSession } from 'next-auth/react';
 
-// Advanced tokenization function for similarity analysis
-const tokenizeText = (text: string): string[] => {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ') // Remove punctuation
-    .split(/\s+/)
-    .filter(token => token.length > 0);
-};
-
-// Get token similarity analysis for future modification recommendations
-const analyzeTokenSimilarity = (text: string, query: string) => {
-  const queryTokens = tokenizeText(query);
-  const textTokens = tokenizeText(text);
-  
-  return textTokens.map(token => {
-    const exactMatch = queryTokens.includes(token);
-    const partialMatch = queryTokens.some(queryToken => 
-      token.includes(queryToken) || queryToken.includes(token)
-    );
-    const stemMatch = queryTokens.some(queryToken => 
-      token.startsWith(queryToken) || queryToken.startsWith(token)
-    );
-    
-    return {
-      token,
-      exactMatch,
-      partialMatch,
-      stemMatch,
-      isRelevant: exactMatch || partialMatch || stemMatch,
-      matchType: exactMatch ? 'exact' : partialMatch ? 'partial' : stemMatch ? 'stem' : 'none'
-    };
-  });
-};
-
-
-// Future utility for modification recommendations (currently unused but ready for implementation)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getModificationSuggestions = (text: string, query: string) => {
-  const tokenAnalysis = analyzeTokenSimilarity(text, query);
-  const queryTokens = tokenizeText(query);
-  
-  // Find tokens that could be improved
-  const weakTokens = tokenAnalysis.filter(token => 
-    !token.isRelevant && token.token.length > 3
-  );
-  
-  // Find query terms not present in text
-  const missingQueryTerms = queryTokens.filter(queryToken => 
-    !tokenAnalysis.some(token => token.isRelevant && token.token.includes(queryToken))
-  );
-  
-  return {
-    weakTokens: weakTokens.map(t => t.token),
-    missingQueryTerms,
-    suggestions: [
-      ...missingQueryTerms.map(term => `Consider adding "${term}" to improve relevance`),
-      ...weakTokens.slice(0, 3).map(token => `Consider replacing "${token.token}" with a more relevant term`)
-    ]
-  };
-};
 
 export default function Home() {
   const { data: session } = useSession();
@@ -72,8 +12,6 @@ export default function Home() {
   const [passages, setPassages] = useState('');
   const [results, setResults] = useState<SimilarityResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<{ [key: number]: TokenSuggestion[] }>({});
-  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
   const [error, setError] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
@@ -131,7 +69,9 @@ export default function Home() {
     if (rerankProvider === 'openai') {
       return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
     } else if (rerankProvider === 'google-vertex') {
-      return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
+      // Google AI API keys start with "AIza" and are typically 39 characters total
+      // Allow for slight variations in length for different Google AI services
+      return /^AIza[0-9A-Za-z_-]{30,40}$/.test(key);
     }
     return true; // Mock provider doesn't need validation
   };
@@ -280,41 +220,6 @@ export default function Home() {
     }
   };
 
-  const fetchSuggestions = async (text: string, resultIndex: number) => {
-    if (loadingSuggestions[resultIndex]) return;
-    
-    setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: true }));
-    
-    try {
-      // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint  
-      const endpoint = session ? '/api/suggestions' : '/api/suggestions-legacy';
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: text,
-          query: query.trim(),
-          apiKey: apiKey || undefined,
-          provider: provider,
-          model: model
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch suggestions');
-      }
-
-      const data = await response.json();
-      setSuggestions(prev => ({ ...prev, [resultIndex]: data.suggestions }));
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-    } finally {
-      setLoadingSuggestions(prev => ({ ...prev, [resultIndex]: false }));
-    }
-  };
 
   // Reranking function - sends top candidate from embedding step to rerank step
   const handleRerank = async () => {
@@ -1120,13 +1025,6 @@ export default function Home() {
               const circumference = 2 * Math.PI * 15.9155;
               const strokeDasharray = `${(clampedScore / 100) * circumference} ${circumference}`;
 
-              // Precompute token analysis once per result to avoid repeated calls during render
-              const tokenAnalysis = analyzeTokenSimilarity(result.text, query);
-              const relevantTokensCount = tokenAnalysis.filter(t => t.isRelevant).length;
-              const totalTokensCount = tokenAnalysis.length;
-              const exactCount = tokenAnalysis.filter(t => t.matchType === 'exact').length;
-              const partialCount = tokenAnalysis.filter(t => t.matchType === 'partial').length;
-              const stemCount = tokenAnalysis.filter(t => t.matchType === 'stem').length;
               
               const getScoreColor = (score: number) => {
                 if (score >= 90) return '#059669';
@@ -1264,118 +1162,6 @@ export default function Home() {
                     </div>
                     
                     {/* Tokenized analysis */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center">
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Token Analysis
-                      </h4>
-                      <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
-                        <div className="flex flex-wrap gap-2">
-                          {tokenAnalysis.map((tokenData, tokenIndex) => {
-                            const getTokenStyle = (matchType: string) => {
-                              switch (matchType) {
-                                case 'exact':
-                                  return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700';
-                                case 'partial':
-                                  return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700';
-                                case 'stem':
-                                  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-700';
-                                default:
-                                  return 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400';
-                              }
-                            };
-                            
-                            return (
-                              <span
-                                key={tokenIndex}
-                                className={`px-2 py-1 rounded text-sm font-medium transition-colors ${getTokenStyle(tokenData.matchType)}`}
-                                title={`Match type: ${tokenData.matchType}`}
-                              >
-                                {tokenData.token}
-                              </span>
-                            );
-                          })}
-                        </div>
-                        <div className="mt-3 space-y-1">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {relevantTokensCount} of {totalTokensCount} tokens match query terms
-                          </p>
-                          <div className="flex flex-wrap gap-4 text-xs">
-                            <span className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-green-500 rounded"></div>
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {exactCount} exact
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-blue-500 rounded"></div>
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {partialCount} partial
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-yellow-500 rounded"></div>
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {stemCount} stem
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Token Suggestions Section */}
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                              <Edit3 className="w-4 h-4" />
-                              Token Suggestions
-                            </h4>
-                            <button
-                              onClick={() => fetchSuggestions(result.text, index)}
-                              disabled={loadingSuggestions[index]}
-                              className="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50"
-                            >
-                              {loadingSuggestions[index] ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                'Get Suggestions'
-                              )}
-                            </button>
-                          </div>
-                          
-                          {suggestions[index] && suggestions[index].length > 0 && (
-                            <div className="space-y-2">
-                              {suggestions[index].map((suggestion, suggestionIndex) => (
-                                <div key={suggestionIndex} className="text-xs">
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    &ldquo;{suggestion.originalToken}&rdquo; →
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {suggestion.suggestions.map((suggestionText, suggestionTextIndex) => (
-                                      <span
-                                        key={suggestionTextIndex}
-                                        className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-xs hover:bg-green-200 dark:hover:bg-green-800 cursor-pointer transition-colors"
-                                        title={`Replace "${suggestion.originalToken}" with "${suggestionText}"`}
-                                      >
-                                        {suggestionText}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <p className="text-gray-400 dark:text-gray-500 mt-1">
-                                    {suggestion.reason}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {suggestions[index] && suggestions[index].length === 0 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              No token suggestions available - all tokens match query well!
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               );
