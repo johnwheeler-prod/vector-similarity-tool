@@ -3,23 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --border: #e5e7eb;
-  --input: #f9fafb;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --ring: #3b82f6;
+  --background: #fefdf8;
+  --foreground: #1a1f16;
+  --card: #fdfcf5;
+  --card-foreground: #1a1f16;
+  --border: #e8e6d8;
+  --input: #f9f8f2;
+  --primary: #1a1f16;
+  --primary-foreground: #fefdf8;
+  --secondary: #f5f3ea;
+  --secondary-foreground: #1a1f16;
+  --muted: #f9f8f2;
+  --muted-foreground: #6b6f63;
+  --accent: #f5f3ea;
+  --accent-foreground: #1a1f16;
+  --destructive: #dc2626;
+  --destructive-foreground: #fefdf8;
+  --ring: #1a1f16;
   --radius: 0.75rem;
 }
 
@@ -46,23 +46,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #111111;
-    --card-foreground: #ededed;
-    --border: #262626;
-    --input: #1a1a1a;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --secondary: #1e293b;
-    --secondary-foreground: #f1f5f9;
-    --muted: #1a1a1a;
-    --muted-foreground: #a1a1aa;
-    --accent: #1e293b;
-    --accent-foreground: #f1f5f9;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --ring: #3b82f6;
+    --background: #1a1f16;
+    --foreground: #fefdf8;
+    --card: #1f251b;
+    --card-foreground: #fefdf8;
+    --border: #2d3327;
+    --input: #252b20;
+    --primary: #fefdf8;
+    --primary-foreground: #1a1f16;
+    --secondary: #252b20;
+    --secondary-foreground: #fefdf8;
+    --muted: #252b20;
+    --muted-foreground: #a8b19c;
+    --accent: #252b20;
+    --accent-foreground: #fefdf8;
+    --destructive: #dc2626;
+    --destructive-foreground: #fefdf8;
+    --ring: #fefdf8;
   }
 }
 
@@ -74,35 +74,38 @@ body {
 
 /* Custom gradient backgrounds */
 .gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1f16 0%, #2d3327 100%);
 }
 
 .gradient-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(145deg, rgba(253, 252, 245, 0.8), rgba(249, 248, 242, 0.6));
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(232, 230, 216, 0.3);
+  box-shadow: 0 4px 20px rgba(26, 31, 22, 0.08);
 }
 
 .dark .gradient-card {
-  background: linear-gradient(145deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(31, 37, 27, 0.9), rgba(37, 43, 32, 0.7));
+  border: 1px solid rgba(45, 51, 39, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Modern button styles */
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1f16 0%, #2d3327 100%);
   border: none;
   border-radius: 9999px;
   padding: 0.875rem 2rem;
   font-weight: 600;
-  color: white;
+  color: #fefdf8;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(26, 31, 22, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 8px 25px rgba(26, 31, 22, 0.4);
+  background: linear-gradient(135deg, #252b20 0%, #1a1f16 100%);
 }
 
 .btn-primary:active {
