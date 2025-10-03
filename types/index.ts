@@ -10,12 +10,6 @@ export interface SimilarityResponse {
   totalPassages: number;
 }
 
-export interface TokenSuggestion {
-  originalToken: string;
-  position: number;
-  suggestions: string[];
-  reason: string;
-}
 
 export interface RerankRequest {
   query: string;

@@ -75,7 +75,7 @@ export class RerankingService {
         console.log('✅ OpenAI API key format is valid');
       }
     } else if (this.provider === 'google-vertex') {
-      if (!/^AIza[0-9A-Za-z_-]{35}$/.test(this.apiKey || '')) {
+      if (!/^AIza[0-9A-Za-z_-]{30,40}$/.test(this.apiKey || '')) {
         console.log('❌ Invalid Google AI API key format detected');
       } else {
         console.log('✅ Google AI API key format is valid');
