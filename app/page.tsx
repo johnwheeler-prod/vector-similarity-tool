@@ -288,14 +288,14 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 via-cream-100 to-cream-200 dark:from-forest-950 dark:via-forest-900 dark:to-forest-800">
       {/* Header */}
-      <header className="gradient-card border-b border-white/20 dark:border-white/10">
+      <header className="gradient-card border-b border-cream-300 dark:border-forest-700">
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-bold text-forest-950 dark:text-cream-50 mb-2">
             Vector Similarity Tool
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 font-light">
+          <p className="text-lg text-forest-700 dark:text-cream-300 font-light">
             Compare passages to queries using cosine similarity in vector space
           </p>
         </div>
@@ -304,7 +304,7 @@ export default function Home() {
       {/* Provider Selection */}
       <section className="max-w-4xl mx-auto px-6 py-4">
         <div className="gradient-card rounded-2xl p-6 shadow-xl">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-forest-900 dark:text-cream-100 mb-4 flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
               <rect x="4" y="4" width="16" height="16" rx="2"></rect>
               <rect x="9" y="9" width="6" height="6"></rect>
@@ -321,8 +321,8 @@ export default function Home() {
             <div 
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 provider === 'google' 
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  ? 'border-forest-600 bg-forest-50 dark:bg-forest-900/20' 
+                  : 'border-cream-300 dark:border-forest-700 hover:border-cream-400 dark:hover:border-forest-600'
               }`}
               onClick={() => {
                 setProvider('google');
@@ -332,15 +332,15 @@ export default function Home() {
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">G</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-forest-600 to-forest-700 rounded-lg flex items-center justify-center">
+                  <span className="text-cream-50 font-bold text-sm">G</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-white">Google AI</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Gemini Embedding</p>
+                  <h3 className="font-semibold text-forest-900 dark:text-cream-100">Google AI</h3>
+                  <p className="text-sm text-forest-600 dark:text-cream-400">Gemini Embedding</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs text-forest-500 dark:text-cream-500 mt-2">
                 Free tier available, good for development
               </p>
             </div>
@@ -349,8 +349,8 @@ export default function Home() {
             <div 
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 provider === 'openai' 
-                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  ? 'border-forest-700 bg-forest-100 dark:bg-forest-800/20' 
+                  : 'border-cream-300 dark:border-forest-700 hover:border-cream-400 dark:hover:border-forest-600'
               }`}
               onClick={() => {
                 setProvider('openai');
@@ -360,15 +360,15 @@ export default function Home() {
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">O</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-forest-700 to-forest-800 rounded-lg flex items-center justify-center">
+                  <span className="text-cream-50 font-bold text-sm">O</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-white">OpenAI</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Text Embedding 3</p>
+                  <h3 className="font-semibold text-forest-900 dark:text-cream-100">OpenAI</h3>
+                  <p className="text-sm text-forest-600 dark:text-cream-400">Text Embedding 3</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs text-forest-500 dark:text-cream-500 mt-2">
                 High quality, pay-per-use pricing
               </p>
             </div>
@@ -377,7 +377,7 @@ export default function Home() {
           {/* Model Selection for OpenAI */}
           {provider === 'openai' && (
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-forest-700 dark:text-cream-300 mb-2">
                 Model Size
               </label>
               <div className="flex gap-2">
@@ -385,8 +385,8 @@ export default function Home() {
                   onClick={() => setModel('text-embedding-3-small')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     model === 'text-embedding-3-small'
-                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-forest-100 dark:bg-forest-800 text-forest-700 dark:text-forest-300'
+                      : 'bg-cream-200 dark:bg-forest-700 text-forest-700 dark:text-cream-300 hover:bg-cream-300 dark:hover:bg-forest-600'
                   }`}
                 >
                   Small (1536 dim)
@@ -395,8 +395,8 @@ export default function Home() {
                   onClick={() => setModel('text-embedding-3-large')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     model === 'text-embedding-3-large'
-                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-forest-100 dark:bg-forest-800 text-forest-700 dark:text-forest-300'
+                      : 'bg-cream-200 dark:bg-forest-700 text-forest-700 dark:text-cream-300 hover:bg-cream-300 dark:hover:bg-forest-600'
                   }`}
                 >
                   Large (3072 dim)
@@ -411,7 +411,7 @@ export default function Home() {
       <section className="max-w-4xl mx-auto px-6 py-4">
         <div className="gradient-card rounded-2xl p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-forest-900 dark:text-cream-100 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key">
                 <circle cx="7.5" cy="15.5" r="5.5"></circle>
                 <path d="m21 2-9.6 9.6"></path>
@@ -421,14 +421,14 @@ export default function Home() {
             </h2>
             <button
               onClick={() => setShowApiKey(!showApiKey)}
-              className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+              className="text-sm px-3 py-1 bg-forest-100 dark:bg-forest-800 text-forest-700 dark:text-forest-300 rounded-full hover:bg-forest-200 dark:hover:bg-forest-700 transition-colors"
             >
               {showApiKey ? 'Hide' : 'Configure'}
             </button>
           </div>
           
           {apiKeyValid === true && (
-            <div className="flex items-center gap-2 mb-4 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg">
+            <div className="flex items-center gap-2 mb-4 p-3 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <path d="m9 11 3 3L22 4"></path>
@@ -446,7 +446,7 @@ export default function Home() {
           {showApiKey && (
             <form onSubmit={handleApiKeySubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-forest-700 dark:text-cream-300 mb-2">
                   {provider === 'google' ? 'Google AI Studio API Key' : 'OpenAI API Key'}
                 </label>
                 <div className="relative">
@@ -489,7 +489,7 @@ export default function Home() {
                     }
                   </p>
                 )}
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-xs text-forest-500 dark:text-cream-400 mt-2">
                   Your API key is stored locally in your browser and never sent to our servers. 
                   <a 
                     href={provider === 'google' ? "https://aistudio.google.com/app/apikey" : "https://platform.openai.com/api-keys"} 
@@ -505,14 +505,14 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={!apiKeyValid}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-amber-700 text-cream-50 rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 >
                   Save API Key
                 </button>
                 <button
                   type="button"
                   onClick={clearApiKey}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-cream-200 dark:bg-forest-700 text-forest-700 dark:text-cream-300 rounded-lg hover:bg-cream-300 dark:hover:bg-forest-600 transition-colors text-sm font-medium"
                 >
                   Clear
                 </button>
@@ -526,7 +526,7 @@ export default function Home() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Query Input */}
           <div className="gradient-card rounded-2xl p-8 shadow-xl">
-            <label className="block text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <label className="block text-lg font-semibold text-forest-900 dark:text-cream-100 mb-4">
               <Search className="inline w-5 h-5 mr-3" />
               Search Query
             </label>
@@ -534,14 +534,14 @@ export default function Home() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter your search query here..."
-              className="w-full h-28 px-6 py-4 bg-white/80 dark:bg-slate-800/80 border border-white/30 dark:border-slate-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200"
+              className="w-full h-28 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
               required
             />
           </div>
 
           {/* Passages Input */}
           <div className="gradient-card rounded-2xl p-8 shadow-xl">
-            <label className="block text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <label className="block text-lg font-semibold text-forest-900 dark:text-cream-100 mb-4">
               <FileText className="inline w-5 h-5 mr-3" />
               Article Passages
             </label>
@@ -549,10 +549,10 @@ export default function Home() {
               value={passages}
               onChange={(e) => setPassages(e.target.value)}
               placeholder="Enter article passages, one per line..."
-              className="w-full h-52 px-6 py-4 bg-white/80 dark:bg-slate-800/80 border border-white/30 dark:border-slate-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200"
+              className="w-full h-52 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
               required
             />
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 font-medium">
+            <p className="text-sm text-forest-600 dark:text-cream-400 mt-3 font-medium">
               Each line will be treated as a separate passage for comparison.
             </p>
           </div>
@@ -588,7 +588,7 @@ export default function Home() {
         {results.length > 0 && (
           <div className="mt-12 space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-forest-950 dark:text-cream-50 mb-2">
                 Similarity Results
               </h2>
               {usedRealAPI === true ? (
@@ -612,7 +612,7 @@ export default function Home() {
                   Using Mock Embeddings ({currentProvider === 'google' ? 'Google AI' : 'OpenAI'} API quota exceeded or no key)
                 </div>
               ) : (
-                <div className="flex items-center justify-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center justify-center gap-1 text-sm text-forest-500 dark:text-cream-400">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
                     <rect x="4" y="4" width="16" height="16" rx="2"></rect>
                     <rect x="9" y="9" width="6" height="6"></rect>
@@ -650,7 +650,7 @@ export default function Home() {
                     Using Mock Reranker ({rerankProviderUsed === 'openai' ? 'OpenAI' : rerankProviderUsed === 'google-vertex' ? 'Google Vertex AI' : 'Mock'} API quota exceeded or no key)
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center gap-1 text-sm text-purple-600 dark:text-purple-400">
+                  <div className="flex items-center justify-center gap-1 text-sm text-amber-600 dark:text-amber-400">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-cpu">
                       <rect x="4" y="4" width="16" height="16" rx="2"></rect>
                       <rect x="9" y="9" width="6" height="6"></rect>
@@ -666,15 +666,15 @@ export default function Home() {
             )}
 
             {/* Tabbed Interface */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div className="bg-cream-50 dark:bg-forest-800 rounded-2xl shadow-xl border border-cream-200 dark:border-forest-700 overflow-hidden">
               {/* Tab Headers */}
-              <div className="flex border-b border-gray-200 dark:border-slate-700">
+              <div className="flex border-b border-cream-200 dark:border-forest-700">
                 <button
                   onClick={() => setActiveTab('embedding')}
                   className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
                     activeTab === 'embedding'
-                      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-600 dark:border-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                      ? 'text-forest-700 dark:text-forest-300 bg-forest-50 dark:bg-forest-800/20 border-b-2 border-forest-700 dark:border-forest-300'
+                      : 'text-forest-500 dark:text-cream-400 hover:text-forest-700 dark:hover:text-cream-300 hover:bg-cream-50 dark:hover:bg-forest-700/50'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -691,10 +691,10 @@ export default function Home() {
                   disabled={!results.length}
                   className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
                     activeTab === 'rerank'
-                      ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-b-2 border-purple-600 dark:border-purple-400'
+                      ? 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-800/20 border-b-2 border-amber-600 dark:border-amber-400'
                       : results.length
-                      ? 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                      ? 'text-forest-500 dark:text-cream-400 hover:text-forest-700 dark:hover:text-cream-300 hover:bg-cream-50 dark:hover:bg-forest-700/50'
+                      : 'text-forest-300 dark:text-forest-600 cursor-not-allowed'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -722,7 +722,7 @@ export default function Home() {
                             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                           </svg>
                         </div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span className="text-sm font-medium text-forest-700 dark:text-cream-300">
                           {results.length} results from embedding similarity
                         </span>
                       </div>
@@ -735,7 +735,7 @@ export default function Home() {
                           </svg>
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Results Yet</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-forest-600 dark:text-cream-400">
                           Run a similarity search to see embedding results here
                         </p>
                       </div>
@@ -746,8 +746,8 @@ export default function Home() {
                 {activeTab === 'rerank' && (
                   <div className="space-y-4">
                     {/* Rerank Provider Selection */}
-                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/50">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                    <div className="bg-gradient-to-r from-amber-50 to-forest-50 dark:from-amber-900/20 dark:to-forest-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/50">
+                      <h4 className="text-sm font-semibold text-forest-700 dark:text-cream-300 mb-3 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                           <path d="M3 6h18"></path>
                           <path d="M7 12h10"></path>
@@ -760,42 +760,42 @@ export default function Home() {
                           onClick={() => handleRerankProviderChange('mock')}
                           className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                             rerankProvider === 'mock'
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                              : 'border-cream-300 dark:border-forest-700 hover:border-cream-400 dark:hover:border-forest-600'
                           }`}
                         >
                           <div className="text-xs font-medium mb-1">Mock</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Free testing</div>
+                          <div className="text-xs text-forest-500 dark:text-cream-400">Free testing</div>
                         </button>
                         <button
                           onClick={() => handleRerankProviderChange('openai')}
                           className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                             rerankProvider === 'openai'
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                              : 'border-cream-300 dark:border-forest-700 hover:border-cream-400 dark:hover:border-forest-600'
                           }`}
                         >
                           <div className="text-xs font-medium mb-1">OpenAI</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Cross-encoder</div>
+                          <div className="text-xs text-forest-500 dark:text-cream-400">Cross-encoder</div>
                         </button>
                         <button
                           onClick={() => handleRerankProviderChange('google-vertex')}
                           className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                             rerankProvider === 'google-vertex'
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                              : 'border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600'
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                              : 'border-cream-300 dark:border-forest-700 hover:border-cream-400 dark:hover:border-forest-600'
                           }`}
                         >
                           <div className="text-xs font-medium mb-1">Google</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Vertex AI</div>
+                          <div className="text-xs text-forest-500 dark:text-cream-400">Vertex AI</div>
                         </button>
                       </div>
                     </div>
 
                     {/* Rerank API Key Configuration */}
                     {rerankProvider !== 'mock' && (
-                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/50">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                      <div className="bg-gradient-to-r from-amber-50 to-forest-50 dark:from-amber-900/20 dark:to-forest-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/50">
+                        <h4 className="text-sm font-semibold text-forest-700 dark:text-cream-300 mb-3 flex items-center">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <circle cx="12" cy="16" r="1"></circle>
@@ -821,7 +821,7 @@ export default function Home() {
                                   </span>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-2 text-forest-500 dark:text-cream-400">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                     <circle cx="12" cy="16" r="1"></circle>
@@ -842,7 +842,7 @@ export default function Home() {
                               )}
                               <button
                                 onClick={() => setShowRerankApiKey(true)}
-                                className="text-xs bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-lg transition-colors"
+                                className="text-xs bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-lg transition-colors"
                               >
                                 {rerankApiKeyValid ? 'Change' : 'Add'} API Key
                               </button>
@@ -864,7 +864,7 @@ export default function Home() {
                                 value={rerankApiKey}
                                 onChange={handleRerankApiKeyChange}
                                 placeholder={`Enter your ${rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key`}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 border border-cream-300 dark:border-forest-600 rounded-lg bg-cream-50 dark:bg-forest-700 text-forest-900 dark:text-cream-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                               />
                               {rerankApiKeyValid === false && (
                                 <p className="text-red-500 text-xs mt-1">
@@ -873,7 +873,7 @@ export default function Home() {
                               )}
                             </div>
                             <div className="flex items-center justify-between">
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="text-xs text-forest-500 dark:text-cream-400">
                                 {rerankProvider === 'openai' ? (
                                   <>Get your OpenAI API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">OpenAI Platform</a></>
                                 ) : (
@@ -890,7 +890,7 @@ export default function Home() {
                                 <button
                                   onClick={handleRerankApiKeySubmit}
                                   disabled={!rerankApiKeyValid}
-                                  className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded-lg transition-colors"
+                                  className="text-xs bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded-lg transition-colors"
                                 >
                                   Save
                                 </button>
@@ -919,21 +919,21 @@ export default function Home() {
                               </svg>
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Embedding Results</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-forest-600 dark:text-cream-400">
                               Complete an embedding search first to enable reranking
                             </p>
                           </div>
                         ) : (
                           <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 dark:text-purple-400">
+                            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 dark:text-amber-400">
                                 <path d="M3 6h18"></path>
                                 <path d="M7 12h10"></path>
                                 <path d="M10 18h4"></path>
                               </svg>
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready for Reranking</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            <p className="text-sm text-forest-600 dark:text-cream-400 mb-6">
                               {rerankProvider === 'mock' 
                                 ? 'Use mock cross-encoder for testing without API costs'
                                 : `Configure your ${rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key and start reranking to improve results`
@@ -945,7 +945,7 @@ export default function Home() {
                               <button
                                 onClick={handleRerank}
                                 disabled={rerankLoading}
-                                className="btn-primary bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                className="btn-primary bg-gradient-to-r from-amber-600 to-forest-600 hover:from-amber-700 hover:to-forest-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                               >
                                 {rerankLoading ? (
                                   <>
@@ -987,8 +987,8 @@ export default function Home() {
 
                     {rerankLoading && (
                       <div className="text-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-600 dark:text-purple-400 mx-auto mb-4" />
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Reranking your results...</p>
+                        <Loader2 className="w-8 h-8 animate-spin text-amber-600 dark:text-amber-400 mx-auto mb-4" />
+                        <p className="text-sm text-forest-600 dark:text-cream-400">Reranking your results...</p>
                       </div>
                     )}
                   </div>
@@ -1051,13 +1051,13 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-bold px-4 py-2 rounded-full border ${
                         isRerankResult 
-                          ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700'
-                          : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
+                          ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700'
+                          : 'text-forest-600 dark:text-forest-400 bg-forest-50 dark:bg-forest-900/30 border-forest-200 dark:border-forest-700'
                       }`}>
                         {isRerankResult ? `Reranked #${result.rank}` : `Rank #${index + 1}`}
                       </span>
                       {isRerankResult && (
-                        <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-700">
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M7 12h10"></path>
@@ -1109,7 +1109,7 @@ export default function Home() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                      <span className="text-sm font-semibold text-forest-600 dark:text-cream-400">
                         similar
                       </span>
                     </div>
@@ -1117,8 +1117,8 @@ export default function Home() {
 
                   {/* Score Breakdown for Rerank Results */}
                   {isRerankResult && (
-                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 mb-6 border border-purple-200/50 dark:border-purple-700/50">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                    <div className="bg-gradient-to-r from-amber-50 to-forest-50 dark:from-amber-900/20 dark:to-forest-900/20 rounded-xl p-4 mb-6 border border-amber-200/50 dark:border-amber-700/50">
+                      <h4 className="text-sm font-semibold text-forest-700 dark:text-cream-300 mb-3 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                           <path d="M3 6h18"></path>
                           <path d="M7 12h10"></path>
@@ -1128,19 +1128,19 @@ export default function Home() {
                       </h4>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Embedding</div>
+                          <div className="text-xs text-forest-500 dark:text-cream-400 mb-1">Embedding</div>
                           <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                             {normalizedEmbeddingScore}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cross-encoder</div>
-                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                          <div className="text-xs text-forest-500 dark:text-cream-400 mb-1">Cross-encoder</div>
+                          <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
                             {Math.round(result.rerankScore)}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Final</div>
+                          <div className="text-xs text-forest-500 dark:text-cream-400 mb-1">Final</div>
                           <div className="text-lg font-bold text-green-600 dark:text-green-400">
                             {normalizedFinalScore}
                           </div>
@@ -1152,7 +1152,7 @@ export default function Home() {
                   <div className="space-y-4">
                     {/* Original text */}
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                      <h4 className="text-sm font-semibold text-forest-600 dark:text-cream-400 mb-2 flex items-center">
                         <FileText className="w-4 h-4 mr-2" />
                         Original Passage
                       </h4>
