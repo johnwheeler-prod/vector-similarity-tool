@@ -9,18 +9,15 @@ export async function POST(request: NextRequest) {
     const { 
       query, 
       passages, 
-      apiKey, 
       provider = 'google', 
       model = 'gemini-embedding-001',
       rerankProvider = 'mock',
-      rerankModel = 'cross-encoder-ms-marco-MiniLM-L-6-v2',
-      rerankApiKey
+      rerankModel = 'cross-encoder-ms-marco-MiniLM-L-6-v2'
     } = await request.json();
 
     console.log('🔧 Legacy Rerank API Route called');
     console.log('🔧 Provider:', provider);
     console.log('🔧 Model:', model);
-    console.log('🔑 API Key received:', !!apiKey);
     console.log('📝 Query:', query.substring(0, 50) + '...');
     console.log('📄 Passages count:', passages.length);
 
@@ -31,12 +28,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create embedding service with client-provided API key if available
-    const service = apiKey ? 
-      new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel, apiKey) : 
-      new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel);
+    // Create embedding service with server-side API keys
+    const service = new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel);
     
-    console.log('🔧 Using service:', apiKey ? `Client-provided ${provider.toUpperCase()} API key` : 'Default service');
+    console.log('🔧 Using service: Server-side API keys');
 
     // Generate embeddings for query and passages to get embedding scores
     console.log('🔄 Starting reranking process...');
@@ -51,11 +46,10 @@ export async function POST(request: NextRequest) {
       calculateCosineSimilarity(queryEmbedding, passageEmbedding)
     );
 
-    // Create reranking service
+    // Create reranking service with server-side API keys
     const rerankingService = new RerankingService(
       rerankProvider as RerankProvider,
-      rerankModel as RerankModel,
-      rerankApiKey
+      rerankModel as RerankModel
     );
 
     // Perform reranking

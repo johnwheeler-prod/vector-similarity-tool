@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { EmbeddingService, EmbeddingProvider, EmbeddingModel } from '@/lib/embeddings';
 import { RerankingService, RerankProvider, RerankModel } from '@/lib/reranking';
-import { getUserApiKey } from '@/lib/api-keys';
 import { rateLimit } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
 
@@ -37,8 +36,7 @@ export async function POST(request: NextRequest) {
       provider = 'google', 
       model = 'gemini-embedding-001',
       rerankProvider = 'mock',
-      rerankModel = 'cross-encoder-ms-marco-MiniLM-L-6-v2',
-      rerankApiKey
+      rerankModel = 'cross-encoder-ms-marco-MiniLM-L-6-v2'
     } = await request.json();
 
     if (!query || !passages || !Array.isArray(passages)) {
@@ -54,25 +52,15 @@ export async function POST(request: NextRequest) {
     console.log('📝 Query:', query.substring(0, 50) + '...');
     console.log('📄 Passages count:', passages.length);
 
-    // 4. Get user's API key
-    const userApiKey = await getUserApiKey(session.user.email, provider as EmbeddingProvider);
-    if (!userApiKey) {
-      return NextResponse.json(
-        { error: `No ${provider} API key found. Please add your API key in settings.` },
-        { status: 400 }
-      );
-    }
-
-    // 5. Create embedding service with user's API key
+    // 4. Create embedding service with server-side API keys
     const service = new EmbeddingService(
       provider as EmbeddingProvider,
-      model as EmbeddingModel,
-      userApiKey
+      model as EmbeddingModel
     );
 
-    console.log('🔧 Using service: User-provided API key');
+    console.log('🔧 Using service: Server-side API keys');
 
-    // 6. Generate embeddings for query and passages to get embedding scores
+    // 5. Generate embeddings for query and passages to get embedding scores
     console.log('🔄 Starting reranking process...');
     
     const [queryEmbedding, passageEmbeddings] = await Promise.all([
@@ -85,17 +73,16 @@ export async function POST(request: NextRequest) {
       calculateCosineSimilarity(queryEmbedding, passageEmbedding)
     );
 
-    // 7. Create reranking service with user's rerank API key (or fallback to embedding API key)
+    // 6. Create reranking service with server-side API keys
     const rerankingService = new RerankingService(
       rerankProvider as RerankProvider,
-      rerankModel as RerankModel,
-      rerankApiKey || userApiKey
+      rerankModel as RerankModel
     );
 
     // Perform reranking
     const similarities = await rerankingService.rerankPassages(query, passages, embeddingScores);
 
-    // 8. Track usage (for future billing/monitoring)
+    // 7. Track usage (for future billing/monitoring)
     await prisma.user.update({
       where: { email: session.user.email },
       data: {

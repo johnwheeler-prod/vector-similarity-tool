@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
       query, 
       passages, 
       topK = 5, 
-      apiKey, 
       provider = 'google', 
       model = 'gemini-embedding-001' 
     } = await request.json();
@@ -17,9 +16,6 @@ export async function POST(request: NextRequest) {
     console.log('🔧 Legacy API Route called');
     console.log('🔧 Provider:', provider);
     console.log('🔧 Model:', model);
-    console.log('🔑 API Key received:', !!apiKey);
-    console.log('🔑 API Key length:', apiKey?.length || 0);
-    console.log('🔑 API Key preview:', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
 
     if (!query || !passages || !Array.isArray(passages)) {
       return NextResponse.json(
@@ -28,12 +24,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create embedding service with client-provided API key if available
-    const service = apiKey ? 
-      new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel, apiKey) : 
-      new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel);
+    // Create embedding service with server-side API keys
+    const service = new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel);
     
-    console.log('🔧 Using service:', apiKey ? `Client-provided ${provider.toUpperCase()} API key` : 'Default service');
+    console.log('🔧 Using service: Server-side API keys');
 
     // Generate embeddings for query and passages
     console.log('🚀 Starting embedding generation...');

@@ -13,20 +13,12 @@ export default function Home() {
   const [results, setResults] = useState<SimilarityResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
-  const [showApiKeyValue, setShowApiKeyValue] = useState(false);
   const [usedRealAPI, setUsedRealAPI] = useState<boolean | null>(null);
   const [provider, setProvider] = useState<'google' | 'openai'>('google');
   const [model, setModel] = useState<'gemini-embedding-001' | 'text-embedding-3-small' | 'text-embedding-3-large'>('gemini-embedding-001');
   const [currentProvider, setCurrentProvider] = useState<string>('');
   const [rerankProvider, setRerankProvider] = useState<'openai' | 'google-vertex' | 'mock'>('mock');
   const [rerankModel] = useState<string>('cross-encoder-ms-marco-MiniLM-L-6-v2');
-  const [rerankApiKey, setRerankApiKey] = useState('');
-  const [showRerankApiKey, setShowRerankApiKey] = useState(false);
-  const [rerankApiKeyValid, setRerankApiKeyValid] = useState<boolean | null>(null);
-  const [showRerankApiKeyValue, setShowRerankApiKeyValue] = useState(false);
   
   // Reranking state
   const [rerankResults, setRerankResults] = useState<RerankResult[]>([]);
@@ -36,98 +28,7 @@ export default function Home() {
   const [rerankProviderUsed, setRerankProviderUsed] = useState<string>('');
   const [rerankRealAPIUsed, setRerankRealAPIUsed] = useState<boolean | null>(null);
 
-  // Load API key from localStorage on component mount
-  React.useEffect(() => {
-    const savedApiKey = localStorage.getItem('google_ai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      setApiKeyValid(true);
-    }
-    
-    const savedRerankApiKey = localStorage.getItem('rerank_api_key');
-    if (savedRerankApiKey) {
-      setRerankApiKey(savedRerankApiKey);
-      setRerankApiKeyValid(true);
-    }
-  }, []);
 
-  // Validate API key format based on provider
-  const validateApiKey = (key: string): boolean => {
-    if (provider === 'google') {
-      // Google AI API keys typically start with "AIza" and are 39 characters long
-      return /^AIza[0-9A-Za-z_-]{35}$/.test(key);
-    } else if (provider === 'openai') {
-      // OpenAI API keys start with "sk-" and can contain alphanumeric chars, hyphens, and underscores
-      // Length can vary from ~48 to 164+ characters
-      return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
-    }
-    return false;
-  };
-
-  // Validate rerank API key format based on rerank provider
-  const validateRerankApiKey = (key: string): boolean => {
-    if (rerankProvider === 'openai') {
-      return /^sk-[0-9A-Za-z_-]{20,200}$/.test(key);
-    } else if (rerankProvider === 'google-vertex') {
-      // Google AI API keys start with "AIza" and are typically 39 characters total
-      // Allow for slight variations in length for different Google AI services
-      return /^AIza[0-9A-Za-z_-]{30,40}$/.test(key);
-    }
-    return true; // Mock provider doesn't need validation
-  };
-
-  // Handle API key input
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const key = e.target.value;
-    setApiKey(key);
-    
-    if (key.length === 0) {
-      setApiKeyValid(null);
-    } else {
-      setApiKeyValid(validateApiKey(key));
-    }
-  };
-
-  // Save API key to localStorage
-  const handleApiKeySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (apiKeyValid) {
-      localStorage.setItem('google_ai_api_key', apiKey);
-      setError('');
-    } else {
-      setError('Please enter a valid Google AI Studio API key');
-    }
-  };
-
-  // Clear API key
-  const clearApiKey = () => {
-    setApiKey('');
-    setApiKeyValid(null);
-    localStorage.removeItem('google_ai_api_key');
-    setError('');
-  };
-
-  // Handle rerank API key input
-  const handleRerankApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const key = e.target.value;
-    setRerankApiKey(key);
-    setRerankApiKeyValid(key ? validateRerankApiKey(key) : null);
-  };
-
-  // Save rerank API key
-  const handleRerankApiKeySubmit = () => {
-    if (rerankApiKeyValid) {
-      localStorage.setItem('rerank_api_key', rerankApiKey);
-      setShowRerankApiKey(false);
-    }
-  };
-
-  // Clear rerank API key
-  const clearRerankApiKey = () => {
-    setRerankApiKey('');
-    setRerankApiKeyValid(null);
-    localStorage.removeItem('rerank_api_key');
-  };
 
   // Handle rerank provider change
   const handleRerankProviderChange = (newProvider: 'openai' | 'google-vertex' | 'mock') => {
@@ -137,12 +38,6 @@ export default function Home() {
     setRerankError('');
     setRerankProviderUsed('');
     setRerankRealAPIUsed(null);
-    // Reset API key validation if switching away from mock
-    if (newProvider === 'mock') {
-      setRerankApiKeyValid(true);
-    } else {
-      setRerankApiKeyValid(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,10 +45,6 @@ export default function Home() {
     if (!query.trim() || !passages.trim()) return;
 
     console.log('🚀 Frontend: Starting similarity calculation');
-    console.log('🔑 Frontend: API Key exists:', !!apiKey);
-    console.log('🔑 Frontend: API Key length:', apiKey?.length || 0);
-    console.log('🔑 Frontend: API Key preview:', apiKey ? apiKey.substring(0, 10) + '...' : 'None');
-    console.log('🔑 Frontend: API Key valid:', apiKeyValid);
     console.log('📝 Frontend: Query:', query.trim());
 
     setLoading(true);
@@ -171,13 +62,11 @@ export default function Home() {
         query: query.trim(),
         passages: passagesArray,
         topK: 5,
-        apiKey: apiKey || undefined,
         provider: provider,
         model: model
       };
 
       console.log('📤 Frontend: Sending request');
-      console.log('📤 Frontend: API Key in request:', !!requestBody.apiKey);
 
             // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint
             const endpoint = session ? '/api/similarity' : '/api/similarity-legacy';
@@ -245,10 +134,8 @@ export default function Home() {
         passages: topPassages.map(r => r.text),
         provider: provider,
         model: model,
-        apiKey: apiKey || undefined,
         rerankProvider: rerankProvider,
-        rerankModel: rerankModel,
-        rerankApiKey: rerankApiKey || undefined
+        rerankModel: rerankModel
       };
 
       // Use authenticated endpoint if user is signed in, otherwise use legacy endpoint
@@ -327,8 +214,6 @@ export default function Home() {
               onClick={() => {
                 setProvider('google');
                 setModel('gemini-embedding-001');
-                setApiKey('');
-                setApiKeyValid(null);
               }}
             >
               <div className="flex items-center gap-3">
@@ -355,8 +240,6 @@ export default function Home() {
               onClick={() => {
                 setProvider('openai');
                 setModel('text-embedding-3-small');
-                setApiKey('');
-                setApiKeyValid(null);
               }}
             >
               <div className="flex items-center gap-3">
@@ -407,120 +290,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* API Key Section */}
-      <section className="max-w-4xl mx-auto px-6 py-4">
-        <div className="gradient-card rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-forest-900 dark:text-cream-100 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key">
-                <circle cx="7.5" cy="15.5" r="5.5"></circle>
-                <path d="m21 2-9.6 9.6"></path>
-                <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
-              </svg>
-              API Configuration
-            </h2>
-            <button
-              onClick={() => setShowApiKey(!showApiKey)}
-              className="text-sm px-3 py-1 bg-forest-100 dark:bg-forest-800 text-forest-700 dark:text-forest-300 rounded-full hover:bg-forest-200 dark:hover:bg-forest-700 transition-colors"
-            >
-              {showApiKey ? 'Hide' : 'Configure'}
-            </button>
-          </div>
-          
-          {apiKeyValid === true && (
-            <div className="flex items-center gap-2 mb-4 p-3 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <path d="m9 11 3 3L22 4"></path>
-              </svg>
-              <span className="text-sm font-medium">API Key configured successfully</span>
-              <button
-                onClick={clearApiKey}
-                className="ml-auto text-xs px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-
-          {showApiKey && (
-            <form onSubmit={handleApiKeySubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-forest-700 dark:text-cream-300 mb-2">
-                  {provider === 'google' ? 'Google AI Studio API Key' : 'OpenAI API Key'}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showApiKeyValue ? "text" : "password"}
-                    value={apiKey}
-                    onChange={handleApiKeyChange}
-                    placeholder={provider === 'google' ? "AIzaSy..." : "sk-..."}
-                    className={`w-full px-4 py-3 pr-12 bg-white/80 dark:bg-slate-800/80 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 backdrop-blur-sm transition-all duration-200 ${
-                      apiKeyValid === false ? 'border-red-300 dark:border-red-600' : 
-                      apiKeyValid === true ? 'border-green-300 dark:border-green-600' : 
-                      'border-white/30 dark:border-slate-600/30'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKeyValue(!showApiKeyValue)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showApiKeyValue ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-                        <line x1="2" x2="22" y1="2" y2="22"></line>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                {apiKeyValid === false && (
-                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                    Invalid API key format. {provider === 'google' 
-                      ? 'Google AI keys start with "AIza" and are 39 characters long.'
-                      : 'OpenAI keys start with "sk-" and are typically 48-164+ characters long.'
-                    }
-                  </p>
-                )}
-                <p className="text-xs text-forest-500 dark:text-cream-400 mt-2">
-                  Your API key is stored locally in your browser and never sent to our servers. 
-                  <a 
-                    href={provider === 'google' ? "https://aistudio.google.com/app/apikey" : "https://platform.openai.com/api-keys"} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-blue-600 dark:text-blue-400 hover:underline ml-1"
-                  >
-                    Get your {provider === 'google' ? 'free' : ''} API key here
-                  </a>
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={!apiKeyValid}
-                  className="px-4 py-2 bg-amber-700 text-cream-50 rounded-lg hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                >
-                  Save API Key
-                </button>
-                <button
-                  type="button"
-                  onClick={clearApiKey}
-                  className="px-4 py-2 bg-cream-200 dark:bg-forest-700 text-forest-700 dark:text-cream-300 rounded-lg hover:bg-cream-300 dark:hover:bg-forest-600 transition-colors text-sm font-medium"
-                >
-                  Clear
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </section>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -792,114 +561,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Rerank API Key Configuration */}
-                    {rerankProvider !== 'mock' && (
-                      <div className="bg-gradient-to-r from-amber-50 to-forest-50 dark:from-amber-900/20 dark:to-forest-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/50">
-                        <h4 className="text-sm font-semibold text-forest-700 dark:text-cream-300 mb-3 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <circle cx="12" cy="16" r="1"></circle>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                          </svg>
-                          {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API Key
-                        </h4>
-                        
-                        {!showRerankApiKey ? (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {rerankApiKeyValid ? (
-                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M9 12l2 2 4-4"></path>
-                                    <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
-                                    <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
-                                    <path d="M13 12h3a2 2 0 0 1 2 2v1"></path>
-                                    <path d="M13 12h-3a2 2 0 0 0-2 2v1"></path>
-                                  </svg>
-                                  <span className="text-sm font-medium">
-                                    {showRerankApiKeyValue ? rerankApiKey : '••••••••••••••••'}
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-forest-500 dark:text-cream-400">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                    <circle cx="12" cy="16" r="1"></circle>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                  </svg>
-                                  <span className="text-sm">No API key configured</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {rerankApiKeyValid && (
-                                <button
-                                  onClick={() => setShowRerankApiKeyValue(!showRerankApiKeyValue)}
-                                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                >
-                                  {showRerankApiKeyValue ? 'Hide' : 'Show'}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setShowRerankApiKey(true)}
-                                className="text-xs bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-lg transition-colors"
-                              >
-                                {rerankApiKeyValid ? 'Change' : 'Add'} API Key
-                              </button>
-                              {rerankApiKeyValid && (
-                                <button
-                                  onClick={clearRerankApiKey}
-                                  className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                                >
-                                  Clear
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <div>
-                              <input
-                                type="password"
-                                value={rerankApiKey}
-                                onChange={handleRerankApiKeyChange}
-                                placeholder={`Enter your ${rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key`}
-                                className="w-full px-3 py-2 border border-cream-300 dark:border-forest-600 rounded-lg bg-cream-50 dark:bg-forest-700 text-forest-900 dark:text-cream-100 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                              />
-                              {rerankApiKeyValid === false && (
-                                <p className="text-red-500 text-xs mt-1">
-                                  Invalid {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key format
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs text-forest-500 dark:text-cream-400">
-                                {rerankProvider === 'openai' ? (
-                                  <>Get your OpenAI API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">OpenAI Platform</a></>
-                                ) : (
-                                  <>Get your Google Vertex AI key from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Google Cloud Console</a></>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => setShowRerankApiKey(false)}
-                                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={handleRerankApiKeySubmit}
-                                  disabled={!rerankApiKeyValid}
-                                  className="text-xs bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded-lg transition-colors"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {rerankError && (
                       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
@@ -940,46 +601,28 @@ export default function Home() {
                               }
                             </p>
                             
-                            {/* Show rerank button only if conditions are met */}
-                            {(rerankProvider === 'mock' || rerankApiKeyValid) && (
-                              <button
-                                onClick={handleRerank}
-                                disabled={rerankLoading}
-                                className="btn-primary bg-gradient-to-r from-amber-600 to-forest-600 hover:from-amber-700 hover:to-forest-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                              >
-                                {rerankLoading ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Reranking...
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M3 6h18"></path>
-                                      <path d="M7 12h10"></path>
-                                      <path d="M10 18h4"></path>
-                                    </svg>
-                                    Start Reranking
-                                  </>
-                                )}
-                              </button>
-                            )}
-                            
-                            {/* Show message if API key is required but not configured */}
-                            {rerankProvider !== 'mock' && !rerankApiKeyValid && (
-                              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mt-4">
-                                <div className="flex items-center gap-2">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 dark:text-yellow-400">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            {/* Show rerank button */}
+                            <button
+                              onClick={handleRerank}
+                              disabled={rerankLoading}
+                              className="btn-primary bg-gradient-to-r from-amber-600 to-forest-600 hover:from-amber-700 hover:to-forest-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            >
+                              {rerankLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Reranking...
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M7 12h10"></path>
+                                    <path d="M10 18h4"></path>
                                   </svg>
-                                  <span className="text-sm text-yellow-800 dark:text-yellow-200">
-                                    {rerankProvider === 'openai' ? 'OpenAI' : 'Google Vertex AI'} API key required
-                                  </span>
-                                </div>
-                              </div>
-                            )}
+                                  Start Reranking
+                                </>
+                              )}
+                            </button>
                           </div>
                         )}
                       </div>

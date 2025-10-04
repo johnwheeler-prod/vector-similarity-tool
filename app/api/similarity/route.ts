@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { EmbeddingService, findMostSimilar, EmbeddingProvider, EmbeddingModel } from '@/lib/embeddings'
 import { rateLimit } from '@/lib/rate-limit'
-import { getUserApiKey } from '@/lib/api-keys'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
@@ -67,22 +66,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4. Get user's API key from secure storage
-    const apiKey = await getUserApiKey(session.user.email, provider as 'google' | 'openai')
+    // 4. Create embedding service with server-side API keys
+    const service = new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel)
     
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: `No ${provider} API key found. Please add your API key in settings.` },
-        { status: 400 }
-      )
-    }
+    console.log('🔑 Using server-side API keys')
 
-    console.log('🔑 Using user API key:', apiKey.substring(0, 10) + '...')
-
-    // 5. Create embedding service with user's API key
-    const service = new EmbeddingService(provider as EmbeddingProvider, model as EmbeddingModel, apiKey)
-
-    // 6. Generate embeddings
+    // 5. Generate embeddings
     console.log('🚀 Starting embedding generation...')
     const startTime = Date.now()
     
@@ -96,14 +85,14 @@ export async function POST(request: NextRequest) {
     console.log('📊 Query embedding dimensions:', queryEmbedding.length)
     console.log('📊 Passage embeddings count:', passageEmbeddings.length)
 
-    // 7. Calculate similarity
+    // 6. Calculate similarity
     const results = findMostSimilar(queryEmbedding, passageEmbeddings, passages, topK)
     
     console.log('🎯 Similarity calculation complete')
     console.log('📊 Results count:', results.length)
     console.log('🔍 Real API used:', service.wasRealAPIUsed())
 
-    // 8. Track usage
+    // 7. Track usage
     const tokensUsed = estimateTokens(query, passages)
     const cost = estimateCost(provider, model, tokensUsed)
     
