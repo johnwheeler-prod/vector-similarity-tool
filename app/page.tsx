@@ -2,6 +2,10 @@
 
 import React, { useState } from 'react';
 import { Search, FileText, BarChart3, Loader2 } from 'lucide-react';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+
+const MAX_PASSAGES = 25;
 import { SimilarityResult, RerankResult, RerankResponse } from '@/types';
 import { useSession } from 'next-auth/react';
 
@@ -10,6 +14,12 @@ export default function Home() {
   const { data: session } = useSession();
   const [query, setQuery] = useState('');
   const [passages, setPassages] = useState('');
+  const [manualQuery, setManualQuery] = useState('');
+  const [manualPassages, setManualPassages] = useState('');
+  const [inputMode, setInputMode] = useState<'manual' | 'file'>('manual');
+  const [uploadError, setUploadError] = useState('');
+  const [uploadedFileMeta, setUploadedFileMeta] = useState<{ name: string; rowCount: number } | null>(null);
+  const [parsedPassages, setParsedPassages] = useState<string[]>([]);
   const [results, setResults] = useState<SimilarityResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -145,9 +155,168 @@ export default function Home() {
     }
   };
 
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    if (inputMode === 'manual') {
+      setManualQuery(value);
+    }
+  };
+
+  const handleManualPassagesChange = (value: string) => {
+    setManualPassages(value);
+    if (inputMode === 'manual') {
+      setPassages(value);
+    }
+  };
+
+  const resetFileUpload = () => {
+    setParsedPassages([]);
+    setUploadedFileMeta(null);
+  };
+
+  const handleInputModeChange = (mode: 'manual' | 'file') => {
+    setInputMode(mode);
+    setError('');
+    if (mode === 'manual') {
+      setQuery(manualQuery);
+      setPassages(manualPassages);
+    } else {
+      setUploadError('');
+      if (parsedPassages.length) {
+        setPassages(parsedPassages.join('\n'));
+      } else {
+        setPassages('');
+      }
+    }
+  };
+
+  const processUploadedRows = (rows: Record<string, unknown>[], fileName: string) => {
+    const normalized = rows
+      .map((row) => {
+        const queryValue = row.query ?? row.Query ?? row.QUERY;
+        const passageValue = row.passages ?? row.Passages ?? row.PASSAGES;
+        return {
+          query: typeof queryValue === 'string' ? queryValue.trim() : queryValue != null ? String(queryValue).trim() : '',
+          passage: typeof passageValue === 'string' ? passageValue.trim() : passageValue != null ? String(passageValue).trim() : '',
+        };
+      })
+      .filter((row) => row.query || row.passage);
+
+    if (!normalized.length) {
+      setUploadError('No data found. Make sure the file has "query" and "passages" columns.');
+      resetFileUpload();
+      return;
+    }
+
+    if (normalized.length > MAX_PASSAGES) {
+      setUploadError(`Please limit the file to ${MAX_PASSAGES} data rows (26 including the header).`);
+      resetFileUpload();
+      return;
+    }
+
+    const uniqueQueries = Array.from(new Set(normalized.map((row) => row.query).filter(Boolean)));
+    if (!uniqueQueries.length) {
+      setUploadError('The "query" column is required.');
+      resetFileUpload();
+      return;
+    }
+
+    if (uniqueQueries.length > 1) {
+      setUploadError('All rows must share the same query so they can be compared together.');
+      resetFileUpload();
+      return;
+    }
+
+    const passageValues = normalized.map((row) => row.passage).filter(Boolean);
+    if (!passageValues.length) {
+      setUploadError('The "passages" column must include at least one passage.');
+      resetFileUpload();
+      return;
+    }
+
+    setQuery(uniqueQueries[0]);
+    setPassages(passageValues.join('\n'));
+    setParsedPassages(passageValues);
+    setUploadedFileMeta({ name: fileName, rowCount: normalized.length });
+    setUploadError('');
+  };
+
+  const handleFileUpload = async (file: File | null) => {
+    if (!file) return;
+    setUploadError('');
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!extension || (extension !== 'csv' && extension !== 'xlsx')) {
+      setUploadError('Only .csv or .xlsx files are supported.');
+      resetFileUpload();
+      return;
+    }
+
+    try {
+      if (extension === 'csv') {
+        const text = await file.text();
+        const parsed = Papa.parse<Record<string, unknown>>(text, {
+          header: true,
+          skipEmptyLines: true,
+        });
+
+        if (parsed.errors.length) {
+          throw new Error(parsed.errors[0].message);
+        }
+
+        processUploadedRows(parsed.data, file.name);
+      } else {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+        processUploadedRows(json, file.name);
+      }
+
+      setInputMode('file');
+    } catch (err) {
+      console.error('❌ File parse error:', err);
+      setUploadError('Unable to read file. Ensure it is a valid CSV or XLSX with "query" and "passages" headers.');
+      resetFileUpload();
+    }
+  };
+
+  const clearUploadedFile = () => {
+    resetFileUpload();
+    setUploadError('');
+    setInputMode('manual');
+    setQuery(manualQuery);
+    setPassages(manualPassages);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || !passages.trim()) return;
+    const trimmedQuery = query.trim();
+    const passagesArray = passages
+      .split('\n')
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+
+    if (inputMode === 'file' && !parsedPassages.length) {
+      setError('Upload a CSV or XLSX file with "query" and "passages" columns first.');
+      return;
+    }
+
+    if (!trimmedQuery) {
+      setError('Please enter a query to compare against.');
+      return;
+    }
+
+    if (!passagesArray.length) {
+      setError('Add at least one passage to compare.');
+      return;
+    }
+
+    if (passagesArray.length > MAX_PASSAGES) {
+      setError(`You can submit up to ${MAX_PASSAGES} passages at a time to stay within API limits.`);
+      return;
+    }
 
     console.log('🚀 Frontend: Starting similarity calculation');
     console.log('🔑 Frontend: API Key exists:', !!apiKey);
@@ -160,15 +329,10 @@ export default function Home() {
     setError('');
 
     try {
-      const passagesArray = passages
-        .split('\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
-
       console.log('📄 Frontend: Passages count:', passagesArray.length);
 
       const requestBody = {
-        query: query.trim(),
+        query: trimmedQuery,
         passages: passagesArray,
         topK: 5,
         apiKey: apiKey || undefined,
@@ -286,6 +450,19 @@ export default function Home() {
       setRerankLoading(false);
     }
   };
+
+  const passageCount = passages
+    .split('\n')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0).length;
+
+  const submitDisabled =
+    loading ||
+    !query.trim() ||
+    !passages.trim() ||
+    !passageCount ||
+    passageCount > MAX_PASSAGES ||
+    (inputMode === 'file' && !parsedPassages.length);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cream-50 via-cream-100 to-cream-200 dark:from-forest-950 dark:via-forest-900 dark:to-forest-800">
@@ -524,43 +701,150 @@ export default function Home() {
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Query Input */}
+          {/* Input mode: manual vs file */}
           <div className="gradient-card rounded-2xl p-8 shadow-xl">
-            <label className="block text-lg font-semibold text-forest-900 dark:text-cream-100 mb-4">
-              <Search className="inline w-5 h-5 mr-3" />
-              Search Query
-            </label>
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Enter your search query here..."
-              className="w-full h-28 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
-              required
-            />
-          </div>
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+              <div>
+                <p className="text-lg font-semibold text-forest-900 dark:text-cream-100 flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Provide Query &amp; Passages
+                </p>
+                <p className="text-sm text-forest-700 dark:text-cream-300">
+                  Enter manually or upload a CSV/XLSX with shared query and up to {MAX_PASSAGES} passages.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleInputModeChange('manual')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    inputMode === 'manual'
+                      ? 'bg-forest-100 dark:bg-forest-800 text-forest-800 dark:text-forest-200 border border-forest-300 dark:border-forest-700'
+                      : 'bg-cream-200 dark:bg-forest-700 text-forest-800 dark:text-cream-200 border border-transparent hover:border-cream-400 dark:hover:border-forest-500'
+                  }`}
+                  aria-pressed={inputMode === 'manual'}
+                >
+                  Manual input
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputModeChange('file')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    inputMode === 'file'
+                      ? 'bg-forest-100 dark:bg-forest-800 text-forest-800 dark:text-forest-200 border border-forest-300 dark:border-forest-700'
+                      : 'bg-cream-200 dark:bg-forest-700 text-forest-800 dark:text-cream-200 border border-transparent hover:border-cream-400 dark:hover:border-forest-500'
+                  }`}
+                  aria-pressed={inputMode === 'file'}
+                >
+                  Upload CSV/XLSX
+                </button>
+              </div>
+            </div>
 
-          {/* Passages Input */}
-          <div className="gradient-card rounded-2xl p-8 shadow-xl">
-            <label className="block text-lg font-semibold text-forest-900 dark:text-cream-100 mb-4">
-              <FileText className="inline w-5 h-5 mr-3" />
-              Article Passages
-            </label>
-            <textarea
-              value={passages}
-              onChange={(e) => setPassages(e.target.value)}
-              placeholder="Enter article passages, one per line..."
-              className="w-full h-52 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
-              required
-            />
-            <p className="text-sm text-forest-600 dark:text-cream-400 mt-3 font-medium">
-              Each line will be treated as a separate passage for comparison.
-            </p>
+            {inputMode === 'manual' ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-forest-900 dark:text-cream-100 mb-2">
+                    <Search className="inline w-4 h-4 mr-2" />
+                    Search Query
+                  </label>
+                  <textarea
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    placeholder="Enter your search query here..."
+                    className="w-full h-28 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-forest-900 dark:text-cream-100 mb-2">
+                    <FileText className="inline w-4 h-4 mr-2" />
+                    Article Passages
+                  </label>
+                  <textarea
+                    value={passages}
+                    onChange={(e) => handleManualPassagesChange(e.target.value)}
+                    placeholder="Enter article passages, one per line..."
+                    className="w-full h-52 px-6 py-4 bg-cream-50/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-600 rounded-xl focus:ring-2 focus:ring-forest-600 focus:border-transparent resize-none text-forest-950 dark:text-cream-100 placeholder-forest-500 dark:placeholder-cream-400 backdrop-blur-sm transition-all duration-200"
+                    required
+                  />
+                  <div className="mt-3 flex items-center justify-between text-sm text-forest-600 dark:text-cream-400 font-medium">
+                    <span>
+                      Each line is a separate passage. We cap at {MAX_PASSAGES} to keep requests under rate limits.
+                    </span>
+                    <span className={`${passageCount > MAX_PASSAGES ? 'text-red-600 dark:text-red-400' : ''}`}>
+                      {passageCount}/{MAX_PASSAGES}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-forest-800 dark:text-cream-200 mb-2">
+                    Upload a .csv or .xlsx with header columns &quot;query&quot; and &quot;passages&quot;
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx"
+                    onChange={(e) => handleFileUpload(e.target.files?.[0] ?? null)}
+                    className="block w-full text-sm text-forest-800 dark:text-cream-200 bg-white/80 dark:bg-forest-800/80 border border-cream-300 dark:border-forest-700 rounded-lg file:mr-4 file:py-2 file:px-3 file:border-0 file:bg-forest-100 file:text-forest-900 dark:file:bg-forest-700 dark:file:text-cream-100 cursor-pointer"
+                  />
+                  <p className="text-xs text-forest-600 dark:text-cream-400 mt-2">
+                    Up to 26 rows total (1 header + {MAX_PASSAGES} data rows). All rows must share the same query.
+                  </p>
+                </div>
+
+                {uploadError && (
+                  <div className="rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-200 text-sm p-3">
+                    {uploadError}
+                  </div>
+                )}
+
+                {uploadedFileMeta && parsedPassages.length > 0 && (
+                  <div className="rounded-xl border border-forest-200 dark:border-forest-700 bg-forest-50/70 dark:bg-forest-900/30 p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-forest-900 dark:text-cream-100">{uploadedFileMeta.name}</p>
+                        <p className="text-xs text-forest-700 dark:text-cream-300">
+                          Loaded {uploadedFileMeta.rowCount} rows • {parsedPassages.length} passages ready
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearUploadedFile}
+                        className="text-xs px-3 py-1 bg-cream-200 dark:bg-forest-700 text-forest-800 dark:text-cream-200 rounded-lg hover:bg-cream-300 dark:hover:bg-forest-600 transition-colors"
+                      >
+                        Clear file
+                      </button>
+                    </div>
+                    <div className="text-xs text-forest-700 dark:text-cream-300">
+                      Query (applied to all passages):
+                      <div className="mt-1 p-2 rounded-lg bg-white/60 dark:bg-forest-800/60 border border-cream-200 dark:border-forest-700">
+                        {query || '—'}
+                      </div>
+                    </div>
+                    <div className="text-xs text-forest-700 dark:text-cream-300">
+                      First {Math.min(3, parsedPassages.length)} passages:
+                      <ul className="mt-2 space-y-1 list-disc list-inside">
+                        {parsedPassages.slice(0, 3).map((p, idx) => (
+                          <li key={idx} className="truncate" title={p}>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || !query.trim() || !passages.trim()}
+            disabled={submitDisabled}
             className="btn-primary w-full py-4 px-8 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
           >
             {loading ? (
